@@ -150,15 +150,13 @@ createRoomBtn.addEventListener('click', () => {
 
 // Guest Joins Room
 joinRoomBtn.addEventListener('click', () => {
-    requestFullScreen();
     const hostId = window.location.hash.substring(1);
+    
+    joinRoomBtn.disabled = true;
+    joinRoomBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to Host...';
     
     conn = peer.connect(hostId);
     setupConnectionHandlers();
-    
-    setupScreen.classList.remove('active');
-    playerScreen.classList.add('active');
-    roomIdDisplay.textContent = 'Connected to Host';
 });
 
 // Guest selects local file if host used local file
@@ -167,7 +165,14 @@ guestMediaFileInput.addEventListener('change', (e) => {
     if (file) {
         guestFileNameDisplay.textContent = file.name;
         const url = URL.createObjectURL(file);
+        
+        requestFullScreen();
         setupVideo('local', url);
+        
+        setupScreen.classList.remove('active');
+        playerScreen.classList.add('active');
+        roomIdDisplay.textContent = 'Connected to Host';
+        
         guestFileGroup.classList.add('hidden');
     } else {
         guestFileNameDisplay.textContent = "Choose Video File";
@@ -186,18 +191,37 @@ function setupConnectionHandlers() {
         } else if (data.type === 'sync') {
             handleVideoSync(data);
         } else if (data.type === 'init_video' && !isHost) {
+            currentMediaType = data.mediaType;
             if (data.mediaType === 'local') {
                 guestFileGroup.classList.remove('hidden');
+                joinRoomBtn.classList.add('hidden'); // Hide join button since local file is needed
                 addSystemMessage('Host is playing a local file. Please select the same file.');
             } else {
+                requestFullScreen();
                 setupVideo(data.mediaType, data.url);
+                setupScreen.classList.remove('active');
+                playerScreen.classList.add('active');
+                roomIdDisplay.textContent = 'Connected to Host';
             }
         }
     });
 }
 
+// Auto-convert Google Drive sharing links to direct download URLs to prevent CORS/broken stream errors
+function convertGoogleDriveLink(url) {
+    if (url && url.includes('drive.google.com')) {
+        const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            return `https://docs.google.com/uc?export=download&id=${match[1]}`;
+        }
+    }
+    return url;
+}
+
 // Video Setup
 function setupVideo(type, url) {
+    url = convertGoogleDriveLink(url);
+    
     if (type === 'youtube') {
         nativePlayer.classList.add('hidden');
         ytContainer.classList.remove('hidden');
