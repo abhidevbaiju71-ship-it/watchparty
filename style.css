@@ -311,27 +311,112 @@ video {
     background: var(--primary-hover);
 }
 
-.chat-toggle-floating {
+/* TOP VIDEO CONTROLS BAR */
+.video-controls-top {
     position: absolute;
     top: 20px;
     right: 20px;
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 30px;
-    font-weight: 600;
-    font-size: 1rem;
-    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);
+    display: flex;
+    gap: 10px;
     z-index: 10;
+}
+
+.video-controls-top .control-btn {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 30px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 10px;
-    transition: transform 0.3s;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
-.chat-toggle-floating:hover {
-    transform: scale(1.05);
+
+.video-controls-top .control-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(244, 63, 94, 0.4);
+}
+
+.video-controls-top .control-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Room Info Badge Close Button */
+.close-badge-btn {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s, transform 0.2s;
+    margin-left: 5px;
+    flex-shrink: 0;
+}
+
+.close-badge-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.close-badge-btn i {
+    font-size: 0.8rem;
+}
+
+/* Responsive adjustment for mobile controls */
+@media screen and (max-width: 580px) {
+    .video-controls-top {
+        top: 15px;
+        right: 15px;
+        gap: 6px;
+    }
+    .video-controls-top .control-btn span {
+        display: none; /* Hide text on small screens, keeping only icons */
+    }
+    .video-controls-top .control-btn {
+        padding: 0;
+        width: 38px;
+        height: 38px;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    .room-info {
+        top: 15px;
+        left: 15px;
+        max-width: calc(100% - 150px);
+    }
+    .badge-content {
+        padding: 6px 8px 6px 12px;
+        gap: 8px;
+    }
+    .badge-content span {
+        font-size: 0.8rem;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    #copy-invite-btn {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+    #copy-invite-btn span {
+        display: none;
+    }
 }
 
 /* CHAT PANEL */

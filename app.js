@@ -21,9 +21,15 @@ const nativePlayer = document.getElementById('native-player');
 const ytContainer = document.getElementById('youtube-player');
 const roomIdDisplay = document.getElementById('room-id-display');
 const copyInviteBtn = document.getElementById('copy-invite-btn');
+const closeShareBtn = document.getElementById('close-share-btn');
+const roomInfoBadge = document.getElementById('room-info-badge');
+
+// Top Video Controls Elements
+const topShareBtn = document.getElementById('top-share-btn');
+const topLayoutBtn = document.getElementById('top-layout-btn');
+const topFullscreenBtn = document.getElementById('top-fullscreen-btn');
 
 const chatContainer = document.getElementById('chat-container');
-const toggleChatBtn = document.getElementById('toggle-chat-btn');
 const closeChatBtn = document.getElementById('close-chat-btn');
 const chatMessages = document.getElementById('chat-messages');
 const chatForm = document.getElementById('chat-form');
@@ -79,6 +85,11 @@ function init() {
                     mediaType: currentMediaType,
                     url: currentMediaType === 'direct' || currentMediaType === 'youtube' ? mediaUrlInput.value : null
                 });
+                // Auto-hide the share badge when partner joins to keep layout clean
+                if (roomInfoBadge) {
+                    roomInfoBadge.classList.add('hidden');
+                    topShareBtn.classList.remove('active');
+                }
             });
         }
     });
@@ -177,6 +188,12 @@ guestMediaFileInput.addEventListener('change', (e) => {
         roomIdDisplay.textContent = 'Connected to Host';
         
         guestFileGroup.classList.add('hidden');
+        
+        // Hide share badge for Guest by default
+        if (roomInfoBadge) {
+            roomInfoBadge.classList.add('hidden');
+            topShareBtn.classList.remove('active');
+        }
     } else {
         guestFileNameDisplay.textContent = "Choose Video File";
     }
@@ -205,6 +222,12 @@ function setupConnectionHandlers() {
                 setupScreen.classList.remove('active');
                 playerScreen.classList.add('active');
                 roomIdDisplay.textContent = 'Connected to Host';
+                
+                // Hide share badge for Guest by default
+                if (roomInfoBadge) {
+                    roomInfoBadge.classList.add('hidden');
+                    topShareBtn.classList.remove('active');
+                }
             }
         }
     });
@@ -321,16 +344,104 @@ function onYtStateChange(event) {
     }
 }
 
-// Chat UI
-toggleChatBtn.addEventListener('click', () => {
-    chatContainer.classList.remove('hidden');
-    toggleChatBtn.classList.add('hidden');
+// Chat & Layout UI Helper
+function toggleLayout(showChat) {
+    const layoutIcon = topLayoutBtn.querySelector('i');
+    const layoutSpan = topLayoutBtn.querySelector('span');
+    
+    if (showChat) {
+        chatContainer.classList.remove('hidden');
+        topLayoutBtn.classList.add('active');
+        if (layoutIcon) {
+            layoutIcon.className = 'fa-solid fa-video';
+        }
+        if (layoutSpan) {
+            layoutSpan.textContent = 'Video Only';
+        }
+    } else {
+        chatContainer.classList.add('hidden');
+        topLayoutBtn.classList.remove('active');
+        if (layoutIcon) {
+            layoutIcon.className = 'fa-solid fa-table-columns';
+        }
+        if (layoutSpan) {
+            layoutSpan.textContent = 'Chat & Video';
+        }
+    }
+}
+
+// Layout / Chat Toggle
+topLayoutBtn.addEventListener('click', () => {
+    const isChatHidden = chatContainer.classList.contains('hidden');
+    toggleLayout(isChatHidden);
 });
 
 closeChatBtn.addEventListener('click', () => {
-    chatContainer.classList.add('hidden');
-    toggleChatBtn.classList.remove('hidden');
+    toggleLayout(false);
 });
+
+// Share Badge Control
+topShareBtn.addEventListener('click', () => {
+    roomInfoBadge.classList.toggle('hidden');
+    const isHidden = roomInfoBadge.classList.contains('hidden');
+    if (isHidden) {
+        topShareBtn.classList.remove('active');
+    } else {
+        topShareBtn.classList.add('active');
+    }
+});
+
+closeShareBtn.addEventListener('click', () => {
+    roomInfoBadge.classList.add('hidden');
+    topShareBtn.classList.remove('active');
+});
+
+// Fullscreen (Resize) Control
+function toggleFullScreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const docElm = document.documentElement;
+        if (docElm.requestFullscreen) {
+            docElm.requestFullscreen().catch(err => console.log(err));
+        } else if (docElm.webkitRequestFullscreen) {
+            docElm.webkitRequestFullscreen().catch(err => console.log(err));
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(err => console.log(err));
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen().catch(err => console.log(err));
+        }
+    }
+}
+
+topFullscreenBtn.addEventListener('click', toggleFullScreen);
+
+function updateFullscreenButton() {
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    const fsIcon = topFullscreenBtn.querySelector('i');
+    const fsSpan = topFullscreenBtn.querySelector('span');
+    
+    if (isFullscreen) {
+        if (fsIcon) {
+            fsIcon.className = 'fa-solid fa-compress';
+        }
+        if (fsSpan) {
+            fsSpan.textContent = 'Minimize';
+        }
+        topFullscreenBtn.classList.add('active');
+    } else {
+        if (fsIcon) {
+            fsIcon.className = 'fa-solid fa-expand';
+        }
+        if (fsSpan) {
+            fsSpan.textContent = 'Resize';
+        }
+        topFullscreenBtn.classList.remove('active');
+    }
+}
+
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
 
 function submitChat() {
     const text = chatInput.innerText.trim();
