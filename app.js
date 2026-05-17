@@ -305,16 +305,27 @@ closeChatBtn.addEventListener('click', () => {
     toggleChatBtn.classList.remove('hidden');
 });
 
-chatForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const text = chatInput.value.trim();
+function submitChat() {
+    const text = chatInput.innerText.trim();
     if (!text) return;
     
     addMessage(text, true);
     if (conn && conn.open) {
         conn.send({ type: 'chat', text: text });
     }
-    chatInput.value = '';
+    chatInput.innerText = '';
+}
+
+chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitChat();
+});
+
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitChat();
+    }
 });
 
 function addMessage(text, isSelf) {
