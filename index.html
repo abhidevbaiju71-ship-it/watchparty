@@ -7,63 +7,81 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
     <title>WatchParty</title>
-    <!-- PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-
-    <!-- Setup / Login Screen -->
-    <div id="setup-screen" class="screen active glass-panel">
-        <h1 class="logo">Watch<span>Party</span></h1>
-        <p class="subtitle">Sync movies with your partner instantly.</p>
-        
-        <div id="loading-state">
-            Connecting to network...
-        </div>
-
-        <div id="host-panel" class="panel hidden">
-            <h3>Create a Room</h3>
-            <p>You are the host. Choose a video to start.</p>
+    <div id="setup-screen" class="screen active setup-bg">
+        <div class="landing-container">
+            <div class="hero">
+                <h1 class="logo"><i class="fa-solid fa-play"></i> Watch<span>Party</span></h1>
+                <p class="subtitle">Sync movies with your partner instantly.</p>
+            </div>
             
-            <div class="input-group">
-                <label>Media Source Type</label>
-                <select id="media-type">
-                    <option value="direct">Direct URL / Google Drive / MP4</option>
-                    <option value="youtube">YouTube Link</option>
-                    <option value="local">Local File</option>
-                </select>
+            <div id="loading-state" class="glass-card loading-card">
+                <i class="fa-solid fa-spinner fa-spin"></i> Connecting to servers...
             </div>
 
-            <div class="input-group" id="url-input-group">
-                <label>Media URL</label>
-                <input type="text" id="media-url" placeholder="Paste link here...">
+            <div id="host-panel" class="hidden">
+                <div class="glass-card">
+                    <h3 class="card-title">Choose Platform</h3>
+                    <div class="platform-grid">
+                        <div class="platform-card active" data-type="direct">
+                            <i class="fa-solid fa-link"></i>
+                            <span>Direct Link</span>
+                        </div>
+                        <div class="platform-card" data-type="youtube">
+                            <i class="fa-brands fa-youtube"></i>
+                            <span>YouTube</span>
+                        </div>
+                        <div class="platform-card" data-type="local">
+                            <i class="fa-solid fa-folder-open"></i>
+                            <span>Local File</span>
+                        </div>
+                    </div>
+
+                    <div class="input-section">
+                        <div id="url-input-group" class="input-wrapper">
+                            <i class="fa-solid fa-link input-icon"></i>
+                            <input type="text" id="media-url" placeholder="Paste direct URL or Google Drive link...">
+                        </div>
+                        <div id="file-input-group" class="hidden file-upload-wrapper">
+                            <label for="media-file" class="file-label">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span id="file-name-display">Choose Video File</span>
+                            </label>
+                            <input type="file" id="media-file" accept="video/mp4,video/x-m4v,video/*">
+                        </div>
+                        <button id="create-room-btn" class="primary-btn">Create Room <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                </div>
             </div>
 
-            <div class="input-group hidden" id="file-input-group">
-                <label>Select Video File</label>
-                <input type="file" id="media-file" accept="video/mp4,video/x-m4v,video/*">
+            <div id="guest-panel" class="hidden">
+                <div class="glass-card">
+                    <h3 class="card-title">Join Party</h3>
+                    <p class="guest-msg">You have been invited to a WatchParty!</p>
+                    <div class="input-section hidden" id="guest-file-group">
+                        <p class="warning-text"><i class="fa-solid fa-triangle-exclamation"></i> Host selected a local file. Please select the same file from your device to watch.</p>
+                        <div class="file-upload-wrapper">
+                            <label for="guest-media-file" class="file-label">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span id="guest-file-name-display">Choose Video File</span>
+                            </label>
+                            <input type="file" id="guest-media-file" accept="video/mp4,video/x-m4v,video/*">
+                        </div>
+                    </div>
+                    <button id="join-room-btn" class="primary-btn">Join Room <i class="fa-solid fa-door-open"></i></button>
+                </div>
             </div>
-
-            <button id="create-room-btn" class="primary-btn">Start Room & Go Fullscreen</button>
-        </div>
-
-        <div id="guest-panel" class="panel hidden">
-            <h3>Join Room</h3>
-            <p>You have been invited to a room.</p>
-            <div class="input-group hidden" id="guest-file-group">
-                <label>Host selected a local file. Please select the identical file from your device to watch.</label>
-                <input type="file" id="guest-media-file" accept="video/mp4,video/x-m4v,video/*">
-            </div>
-            <button id="join-room-btn" class="primary-btn">Join & Go Fullscreen</button>
         </div>
     </div>
 
     <!-- Main Player Screen -->
     <div id="player-screen" class="screen">
-        
         <div id="video-container">
             <!-- Native Video Player for Direct URLs and Local Files -->
             <video id="native-player" controls playsinline></video>
@@ -72,33 +90,32 @@
             
             <!-- Floating overlay for room info -->
             <div class="room-info" id="room-info-badge">
-                <span id="room-id-display">Room ID...</span>
-                <button id="copy-invite-btn">Copy Invite Link</button>
+                <div class="badge-content">
+                    <span id="room-id-display">Room ID...</span>
+                    <button id="copy-invite-btn"><i class="fa-solid fa-copy"></i> Copy Invite Link</button>
+                </div>
             </div>
 
-            <button id="toggle-chat-btn" class="chat-toggle-floating">💬 Chat</button>
+            <button id="toggle-chat-btn" class="chat-toggle-floating"><i class="fa-solid fa-comment-dots"></i> Chat</button>
         </div>
 
         <div id="chat-container" class="chat-panel hidden">
             <div class="chat-header">
-                <h3>Messages</h3>
-                <button id="close-chat-btn" class="close-btn">✕</button>
+                <h3>Live Chat</h3>
+                <button id="close-chat-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="chat-messages" id="chat-messages">
-                <!-- Messages will appear here -->
                 <div class="message system">Room created. Share the link with your partner!</div>
             </div>
             <div class="chat-input-area">
                 <form id="chat-form">
                     <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
-                    <button type="submit" class="send-btn">➔</button>
+                    <button type="submit" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
                 </form>
             </div>
         </div>
-        
     </div>
 
-    <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="app.js"></script>
 </body>

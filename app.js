@@ -4,15 +4,17 @@ const playerScreen = document.getElementById('player-screen');
 const hostPanel = document.getElementById('host-panel');
 const guestPanel = document.getElementById('guest-panel');
 const loadingState = document.getElementById('loading-state');
-const mediaTypeSelect = document.getElementById('media-type');
 const urlInputGroup = document.getElementById('url-input-group');
 const fileInputGroup = document.getElementById('file-input-group');
 const mediaUrlInput = document.getElementById('media-url');
 const mediaFileInput = document.getElementById('media-file');
+const fileNameDisplay = document.getElementById('file-name-display');
 const createRoomBtn = document.getElementById('create-room-btn');
+const platformCards = document.querySelectorAll('.platform-card');
 
 const guestFileGroup = document.getElementById('guest-file-group');
 const guestMediaFileInput = document.getElementById('guest-media-file');
+const guestFileNameDisplay = document.getElementById('guest-file-name-display');
 const joinRoomBtn = document.getElementById('join-room-btn');
 
 const nativePlayer = document.getElementById('native-player');
@@ -85,14 +87,32 @@ function init() {
 }
 
 // Media Selection UI
-mediaTypeSelect.addEventListener('change', (e) => {
-    currentMediaType = e.target.value;
-    if (currentMediaType === 'local') {
-        urlInputGroup.classList.add('hidden');
-        fileInputGroup.classList.remove('hidden');
+platformCards.forEach(card => {
+    card.addEventListener('click', () => {
+        platformCards.forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        currentMediaType = card.getAttribute('data-type');
+        
+        if (currentMediaType === 'local') {
+            urlInputGroup.classList.add('hidden');
+            fileInputGroup.classList.remove('hidden');
+        } else {
+            urlInputGroup.classList.remove('hidden');
+            fileInputGroup.classList.add('hidden');
+            if (currentMediaType === 'youtube') {
+                mediaUrlInput.placeholder = "Paste YouTube link here...";
+            } else {
+                mediaUrlInput.placeholder = "Paste direct URL or Google Drive link...";
+            }
+        }
+    });
+});
+
+mediaFileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+        fileNameDisplay.textContent = e.target.files[0].name;
     } else {
-        urlInputGroup.classList.remove('hidden');
-        fileInputGroup.classList.add('hidden');
+        fileNameDisplay.textContent = "Choose Video File";
     }
 });
 
@@ -145,9 +165,12 @@ joinRoomBtn.addEventListener('click', () => {
 guestMediaFileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
+        guestFileNameDisplay.textContent = file.name;
         const url = URL.createObjectURL(file);
         setupVideo('local', url);
         guestFileGroup.classList.add('hidden');
+    } else {
+        guestFileNameDisplay.textContent = "Choose Video File";
     }
 });
 
