@@ -70,12 +70,15 @@ function init() {
         if (isHost) {
             conn = connection;
             setupConnectionHandlers();
-            addSystemMessage('Partner joined the room!');
-            // Send current video state to guest
-            sendSync({
-                type: 'init_video',
-                mediaType: currentMediaType,
-                url: currentMediaType === 'direct' || currentMediaType === 'youtube' ? mediaUrlInput.value : null
+            
+            conn.on('open', () => {
+                addSystemMessage('Partner joined the room!');
+                // Send current video state to guest once the connection is open
+                conn.send({
+                    type: 'init_video',
+                    mediaType: currentMediaType,
+                    url: currentMediaType === 'direct' || currentMediaType === 'youtube' ? mediaUrlInput.value : null
+                });
             });
         }
     });
