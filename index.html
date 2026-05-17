@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>WatchParty</title>
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Setup / Login Screen -->
+    <div id="setup-screen" class="screen active glass-panel">
+        <h1 class="logo">Watch<span>Party</span></h1>
+        <p class="subtitle">Sync movies with your partner instantly.</p>
+        
+        <div id="loading-state">
+            Connecting to network...
+        </div>
+
+        <div id="host-panel" class="panel hidden">
+            <h3>Create a Room</h3>
+            <p>You are the host. Choose a video to start.</p>
+            
+            <div class="input-group">
+                <label>Media Source Type</label>
+                <select id="media-type">
+                    <option value="direct">Direct URL / Google Drive / MP4</option>
+                    <option value="youtube">YouTube Link</option>
+                    <option value="local">Local File</option>
+                </select>
+            </div>
+
+            <div class="input-group" id="url-input-group">
+                <label>Media URL</label>
+                <input type="text" id="media-url" placeholder="Paste link here...">
+            </div>
+
+            <div class="input-group hidden" id="file-input-group">
+                <label>Select Video File</label>
+                <input type="file" id="media-file" accept="video/mp4,video/x-m4v,video/*">
+            </div>
+
+            <button id="create-room-btn" class="primary-btn">Start Room & Go Fullscreen</button>
+        </div>
+
+        <div id="guest-panel" class="panel hidden">
+            <h3>Join Room</h3>
+            <p>You have been invited to a room.</p>
+            <div class="input-group hidden" id="guest-file-group">
+                <label>Host selected a local file. Please select the identical file from your device to watch.</label>
+                <input type="file" id="guest-media-file" accept="video/mp4,video/x-m4v,video/*">
+            </div>
+            <button id="join-room-btn" class="primary-btn">Join & Go Fullscreen</button>
+        </div>
+    </div>
+
+    <!-- Main Player Screen -->
+    <div id="player-screen" class="screen">
+        
+        <div id="video-container">
+            <!-- Native Video Player for Direct URLs and Local Files -->
+            <video id="native-player" controls playsinline></video>
+            <!-- Div for YouTube Iframe API -->
+            <div id="youtube-player"></div>
+            
+            <!-- Floating overlay for room info -->
+            <div class="room-info" id="room-info-badge">
+                <span id="room-id-display">Room ID...</span>
+                <button id="copy-invite-btn">Copy Invite Link</button>
+            </div>
+
+            <button id="toggle-chat-btn" class="chat-toggle-floating">💬 Chat</button>
+        </div>
+
+        <div id="chat-container" class="chat-panel hidden">
+            <div class="chat-header">
+                <h3>Messages</h3>
+                <button id="close-chat-btn" class="close-btn">✕</button>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will appear here -->
+                <div class="message system">Room created. Share the link with your partner!</div>
+            </div>
+            <div class="chat-input-area">
+                <form id="chat-form">
+                    <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                    <button type="submit" class="send-btn">➔</button>
+                </form>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="app.js"></script>
+</body>
+</html>
