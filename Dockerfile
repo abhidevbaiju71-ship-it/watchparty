@@ -7,6 +7,9 @@ RUN rm -rf /usr/share/nginx/html/*
 COPY index.html /usr/share/nginx/html/
 COPY style.css /usr/share/nginx/html/
 COPY app.js /usr/share/nginx/html/
+COPY ludo.html /usr/share/nginx/html/
+COPY ludo.css /usr/share/nginx/html/
+COPY ludo.js /usr/share/nginx/html/
 
 # Railway passes the $PORT environment variable to the container.
 # We replace the default port 80 with the Railway PORT dynamically before starting Nginx.
