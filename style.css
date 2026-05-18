@@ -74,6 +74,53 @@ body, html {
 .logo span {
     color: var(--primary);
 }
+
+/* Ludo Launch Button on Landing */
+.ludo-launch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 12px 28px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+}
+.ludo-launch-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(168, 85, 247, 0.55);
+}
+.ludo-launch-btn i {
+    font-size: 1.2rem;
+    animation: diceSpin 3s ease-in-out infinite;
+}
+@keyframes diceSpin {
+    0%, 80%, 100% { transform: rotate(0deg); }
+    90% { transform: rotate(360deg); }
+}
+
+/* Heartbeat animation for logo icon */
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    14% { transform: scale(1.2); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.15); }
+    56% { transform: scale(1); }
+}
+
+.heartbeat-icon {
+    display: inline-block;
+    animation: heartbeat 1.8s ease-in-out infinite;
+    color: var(--primary);
+    filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.6));
+}
+
 .subtitle {
     color: var(--text-muted);
     font-size: 1.1rem;
@@ -269,6 +316,20 @@ video {
     height: 100%;
 }
 
+/* TAP OVERLAY — invisible layer to intercept taps for show/hide controls */
+#tap-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    /* Transparent, but catches taps */
+    background: transparent;
+    cursor: pointer;
+    display: none; /* Only active when controls are hidden */
+}
+
 .room-info {
     position: absolute;
     top: 20px;
@@ -319,6 +380,14 @@ video {
     display: flex;
     gap: 10px;
     z-index: 10;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* Controls hidden state (animated) */
+.video-controls-top.controls-hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
 }
 
 .video-controls-top .control-btn {
@@ -378,6 +447,14 @@ video {
     font-size: 0.8rem;
 }
 
+/* Room info badge hidden state (animated) */
+.room-info.controls-hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
 /* Responsive adjustment for mobile controls */
 @media screen and (max-width: 580px) {
     .video-controls-top {
@@ -430,16 +507,17 @@ video {
 }
 
 .chat-header {
-    padding: 20px;
+    padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--card-border);
+    flex-shrink: 0;
 }
 
 .chat-header h3 {
     font-weight: 600;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
 }
 
 .close-btn {
@@ -461,21 +539,22 @@ video {
 
 .chat-messages {
     flex-grow: 1;
-    padding: 20px;
+    padding: 12px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
+    min-height: 0; /* Ensures flex shrink works correctly */
 }
 
 .message {
     background: rgba(255,255,255,0.1);
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-radius: 16px;
     border-bottom-left-radius: 4px;
     max-width: 85%;
     align-self: flex-start;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     word-break: break-word;
 }
 
@@ -489,59 +568,204 @@ video {
 .message.system {
     background: transparent;
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     align-self: center;
     text-align: center;
     padding: 5px;
 }
 
+/* ===== CHAT INPUT AREA — Custom Keyboard Layout ===== */
+/* 25% of chat panel = text field area, 75% = keyboard */
 .chat-input-area {
-    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
     border-top: 1px solid var(--card-border);
+    background: rgba(15, 23, 42, 0.95);
+}
+
+.chat-text-section {
+    flex-shrink: 0;
 }
 
 #chat-form {
     display: flex;
-    gap: 12px;
+    gap: 8px;
+    padding: 8px 10px;
+    align-items: flex-end;
 }
 
-#chat-input {
+.custom-chat-input {
     flex-grow: 1;
-    border-radius: 24px;
-    background: rgba(0,0,0,0.4);
+    border-radius: 20px;
+    background: rgba(0,0,0,0.5);
     border: 1px solid var(--card-border);
-    padding: 12px 20px;
+    padding: 10px 16px;
     color: white;
-    font-size: 16px;
-    min-height: 48px;
-    max-height: 100px;
+    font-size: 15px;
+    font-family: 'Outfit', sans-serif;
+    min-height: 42px;
+    max-height: 60px;
     overflow-y: auto;
     outline: none;
     word-break: break-word;
     cursor: text;
+    -webkit-user-select: text;
+    user-select: text;
+    /* Prevent native keyboard from appearing */
+    -webkit-user-modify: read-write;
+    caret-color: var(--primary);
 }
-#chat-input:empty:before {
+
+.custom-chat-input:empty:before {
     content: attr(placeholder);
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.4);
     pointer-events: none;
 }
-#chat-input:focus {
+.custom-chat-input:focus {
     border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.15);
 }
 
 .send-btn {
     background: var(--primary);
     color: white;
     border: none;
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    font-size: 1rem;
     cursor: pointer;
     flex-shrink: 0;
+    transition: background 0.2s, transform 0.15s;
+}
+.send-btn:active {
+    transform: scale(0.92);
+    background: var(--primary-hover);
+}
+
+/* ===== CUSTOM ON-SCREEN KEYBOARD ===== */
+.custom-keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 6px 4px 10px;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
+    border-top: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+
+.kb-row {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+}
+
+.kb-key {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    min-width: 30px;
+    height: 40px;
+    padding: 0 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s, transform 0.08s;
+    flex: 1;
+    max-width: 42px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.kb-key:active {
+    background: var(--primary);
+    transform: scale(0.92);
+}
+
+.kb-key.wide {
+    flex: 1.5;
+    max-width: 60px;
+    font-size: 13px;
+}
+
+.kb-key.extra-wide {
+    flex: 5;
+    max-width: none;
+    font-size: 14px;
+    letter-spacing: 2px;
+}
+
+.kb-key.action-key {
+    background: rgba(244, 63, 94, 0.2);
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.kb-key.action-key:active {
+    background: var(--primary);
+    color: #fff;
+}
+
+.kb-key.shift-key,
+.kb-key.backspace-key {
+    flex: 1.4;
+    max-width: 55px;
+}
+
+.kb-key.backspace-key i,
+.kb-key.shift-key i {
+    font-size: 14px;
+}
+
+.kb-key.emoji-key {
+    font-size: 18px;
+    flex: 1;
+    max-width: 42px;
+}
+
+/* Emoji Panel */
+.emoji-panel {
+    display: none;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    max-height: 140px;
+    overflow-y: auto;
+    background: rgba(15, 23, 42, 0.98);
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.emoji-panel.active {
+    display: flex;
+}
+
+.emoji-btn {
+    font-size: 22px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: background 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.emoji-btn:active {
+    background: rgba(255,255,255,0.15);
 }
 
 /* RESPONSIVE LAYOUTS - PUSH VIDEO ASIDE (NO OVERLAP) */
@@ -553,12 +777,17 @@ video {
     }
     #chat-container {
         width: 100%;
-        height: 25%; /* Chat takes 25%, Video takes 75% */
+        height: 50%; /* More space for chat + keyboard */
         border-left: none;
         border-top: 1px solid rgba(255,255,255,0.1);
     }
     .chat-input-area {
-        padding-bottom: env(safe-area-inset-bottom, 15px);
+        padding-bottom: env(safe-area-inset-bottom, 4px);
+    }
+    /* In portrait, messages area gets squeezed by keyboard */
+    .chat-messages {
+        flex: 1;
+        min-height: 40px;
     }
 }
 
@@ -569,7 +798,20 @@ video {
     }
     #chat-container {
         height: 100%;
-        width: 25%; /* Chat takes 25%, Video takes 75% */
-        max-width: 400px;
+        width: 35%; /* Slightly wider for keyboard usability */
+        max-width: 420px;
+    }
+    .kb-key {
+        height: 34px;
+        font-size: 14px;
+        min-width: 24px;
+        max-width: 36px;
+    }
+    .kb-key.extra-wide {
+        max-width: none;
+    }
+    .custom-keyboard {
+        gap: 3px;
+        padding: 4px 3px 6px;
     }
 }

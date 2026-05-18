@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    <title>WatchParty</title>
+    <title>For My Love ❤️</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
     <div id="setup-screen" class="screen active setup-bg">
         <div class="landing-container">
             <div class="hero">
-                <h1 class="logo"><i class="fa-solid fa-play"></i> Watch<span>Party</span></h1>
-                <p class="subtitle">Sync movies with your partner instantly.</p>
+                <h1 class="logo"><i class="fa-solid fa-heart heartbeat-icon"></i> For<span> My Love</span></h1>
+                <p class="subtitle">Watch together, feel together. ❤️</p>
+                <a href="ludo.html" class="ludo-launch-btn"><i class="fa-solid fa-dice"></i> Play Ludo Together</a>
             </div>
-            
+
             <div id="loading-state" class="glass-card loading-card">
-                <i class="fa-solid fa-spinner fa-spin"></i> Connecting to servers...
+                <i class="fa-solid fa-spinner fa-spin"></i> Connecting Your Love...
             </div>
 
             <div id="host-panel" class="hidden">
@@ -55,7 +59,8 @@
                             </label>
                             <input type="file" id="media-file" accept="video/mp4,video/x-m4v,video/*">
                         </div>
-                        <button id="create-room-btn" class="primary-btn">Create Room <i class="fa-solid fa-arrow-right"></i></button>
+                        <button id="create-room-btn" class="primary-btn">Create Room <i
+                                class="fa-solid fa-arrow-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -63,9 +68,10 @@
             <div id="guest-panel" class="hidden">
                 <div class="glass-card">
                     <h3 class="card-title">Join Party</h3>
-                    <p class="guest-msg">You have been invited to a WatchParty!</p>
+                    <p class="guest-msg">You have been invited to watch together! ❤️</p>
                     <div class="input-section hidden" id="guest-file-group">
-                        <p class="warning-text"><i class="fa-solid fa-triangle-exclamation"></i> Host selected a local file. Please select the same file from your device to watch.</p>
+                        <p class="warning-text"><i class="fa-solid fa-triangle-exclamation"></i> Host selected a local
+                            file. Please select the same file from your device to watch.</p>
                         <div class="file-upload-wrapper">
                             <label for="guest-media-file" class="file-label">
                                 <i class="fa-solid fa-cloud-arrow-up"></i>
@@ -74,7 +80,8 @@
                             <input type="file" id="guest-media-file" accept="video/mp4,video/x-m4v,video/*">
                         </div>
                     </div>
-                    <button id="join-room-btn" class="primary-btn">Join Room <i class="fa-solid fa-door-open"></i></button>
+                    <button id="join-room-btn" class="primary-btn">Join Room <i
+                            class="fa-solid fa-door-open"></i></button>
                 </div>
             </div>
         </div>
@@ -87,13 +94,17 @@
             <video id="native-player" controls playsinline></video>
             <!-- Div for YouTube Iframe API -->
             <div id="youtube-player"></div>
-            
+
+            <!-- Tap overlay to toggle controls visibility -->
+            <div id="tap-overlay"></div>
+
             <!-- Floating overlay for room info -->
             <div class="room-info" id="room-info-badge">
                 <div class="badge-content">
                     <span id="room-id-display">Room ID...</span>
                     <button id="copy-invite-btn"><i class="fa-solid fa-copy"></i> Copy Invite Link</button>
-                    <button id="close-share-btn" class="close-badge-btn" title="Hide Room Info"><i class="fa-solid fa-xmark"></i></button>
+                    <button id="close-share-btn" class="close-badge-btn" title="Hide Room Info"><i
+                            class="fa-solid fa-xmark"></i></button>
                 </div>
             </div>
 
@@ -120,13 +131,24 @@
                 <button id="close-chat-btn" class="close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="chat-messages" id="chat-messages">
-                <div class="message system">Room created. Share the link with your partner!</div>
+                <div class="message system">Room created. Share the link with your love! ❤️</div>
             </div>
-            <div class="chat-input-area">
-                <form id="chat-form">
-                    <div id="chat-input" contenteditable="true" placeholder="Type a message..."></div>
-                    <button type="submit" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
-                </form>
+            <!-- Chat input area with custom keyboard — 25% text field, 75% keyboard -->
+            <div class="chat-input-area" id="chat-input-area">
+                <div class="chat-text-section">
+                    <form id="chat-form">
+                        <div id="chat-input" class="custom-chat-input" contenteditable="false"
+                            placeholder="Tap to type a message..."></div>
+                        <button type="submit" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                    </form>
+                </div>
+                <div class="custom-keyboard" id="custom-keyboard">
+                    <div class="kb-row" id="kb-row-1"></div>
+                    <div class="kb-row" id="kb-row-2"></div>
+                    <div class="kb-row" id="kb-row-3"></div>
+                    <div class="kb-row" id="kb-row-4"></div>
+                    <div class="kb-row kb-row-space" id="kb-row-5"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -134,4 +156,5 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script src="app.js"></script>
 </body>
+
 </html>

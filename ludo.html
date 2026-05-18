@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f172a">
+    <title>Ludo — My Love ❤️</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="ludo.css">
+</head>
+<body>
+    <!-- LOBBY SCREEN -->
+    <div id="lobby-screen" class="screen active">
+        <div class="lobby-container">
+            <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back</a>
+            <div class="lobby-hero">
+                <div class="ludo-logo">
+                    <i class="fa-solid fa-dice dice-anim"></i>
+                    <h1>Ludo<span>Love</span></h1>
+                </div>
+                <p class="lobby-sub">Play Ludo with your love ❤️</p>
+            </div>
+
+            <div id="lobby-loading" class="lobby-card loading-card">
+                <i class="fa-solid fa-spinner fa-spin"></i> Connecting...
+            </div>
+
+            <div id="lobby-host" class="lobby-card hidden">
+                <h3>Create Game</h3>
+                <p class="info-text">Start a new Ludo room and invite your partner.</p>
+                <button id="create-game-btn" class="btn-primary"><i class="fa-solid fa-plus"></i> Create Room</button>
+            </div>
+
+            <div id="lobby-share" class="lobby-card hidden">
+                <h3>Waiting for Partner</h3>
+                <p class="info-text">Share this link with your love:</p>
+                <div class="share-box">
+                    <input type="text" id="share-link" readonly>
+                    <button id="copy-link-btn" class="btn-copy"><i class="fa-solid fa-copy"></i></button>
+                </div>
+                <div class="waiting-anim"><i class="fa-solid fa-heart fa-beat"></i> Waiting...</div>
+            </div>
+
+            <div id="lobby-join" class="lobby-card hidden">
+                <h3>Join Game</h3>
+                <p class="info-text">Your love invited you to play Ludo! ❤️</p>
+                <button id="join-game-btn" class="btn-primary"><i class="fa-solid fa-dice"></i> Join Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <div class="game-layout">
+            <div class="game-top-bar">
+                <a href="ludo.html" class="top-btn" id="leave-btn"><i class="fa-solid fa-arrow-left"></i></a>
+                <div class="game-title">Ludo<span>Love</span></div>
+                <div id="turn-indicator" class="turn-badge">Your Turn</div>
+            </div>
+
+            <div class="board-wrapper">
+                <canvas id="ludo-board"></canvas>
+            </div>
+
+            <div class="game-controls">
+                <div class="player-info" id="player-info-red">
+                    <div class="color-dot red-dot"></div>
+                    <span id="label-red">You</span>
+                    <div class="home-count" id="home-red">0/4</div>
+                </div>
+
+                <div class="dice-area">
+                    <button id="roll-dice-btn" class="dice-btn" disabled>
+                        <div class="dice-face" id="dice-face">?</div>
+                    </button>
+                    <p id="dice-msg" class="dice-msg">Waiting...</p>
+                </div>
+
+                <div class="player-info" id="player-info-blue">
+                    <div class="color-dot blue-dot"></div>
+                    <span id="label-blue">Partner</span>
+                    <div class="home-count" id="home-blue">0/4</div>
+                </div>
+            </div>
+
+            <div id="game-toast" class="game-toast hidden"></div>
+        </div>
+    </div>
+
+    <script src="ludo.js"></script>
+</body>
+</html>

@@ -28,12 +28,15 @@ const roomInfoBadge = document.getElementById('room-info-badge');
 const topShareBtn = document.getElementById('top-share-btn');
 const topLayoutBtn = document.getElementById('top-layout-btn');
 const topFullscreenBtn = document.getElementById('top-fullscreen-btn');
+const videoControlsTop = document.getElementById('video-controls-top');
+const tapOverlay = document.getElementById('tap-overlay');
 
 const chatContainer = document.getElementById('chat-container');
 const closeChatBtn = document.getElementById('close-chat-btn');
 const chatMessages = document.getElementById('chat-messages');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
+const customKeyboard = document.getElementById('custom-keyboard');
 
 // App State
 let peer = null;
@@ -42,6 +45,266 @@ let isHost = false;
 let ytPlayer = null;
 let currentMediaType = 'direct';
 let ignoreNextSync = false; // Prevents infinite sync loops
+let controlsHidden = false; // Track whether floating controls are hidden
+let shiftActive = false; // Custom keyboard shift state
+let numbersMode = false; // Custom keyboard numbers/symbols mode
+
+// ===== CUSTOM KEYBOARD BUILDER =====
+const KEY_ROWS_LOWER = [
+    ['q','w','e','r','t','y','u','i','o','p'],
+    ['a','s','d','f','g','h','j','k','l'],
+    ['SHIFT','z','x','c','v','b','n','m','BKSP'],
+    ['123','EMOJI',',','SPACE','.','?','ENTER']
+];
+
+const KEY_ROWS_UPPER = [
+    ['Q','W','E','R','T','Y','U','I','O','P'],
+    ['A','S','D','F','G','H','J','K','L'],
+    ['SHIFT','Z','X','C','V','B','N','M','BKSP'],
+    ['123','EMOJI',',','SPACE','.','?','ENTER']
+];
+
+const KEY_ROWS_NUMBERS = [
+    ['1','2','3','4','5','6','7','8','9','0'],
+    ['@','#','$','%','&','-','+','(',')'],
+    ['SHIFT','*','"','\'',':',';','!','?','BKSP'],
+    ['ABC','EMOJI',',','SPACE','.','/','ENTER']
+];
+
+const EMOJIS = [
+    '❤️','😍','😘','🥰','💕','💖','💗','💓','💞','💝',
+    '😊','😂','🤣','😭','🥺','😢','😅','😎','🔥','✨',
+    '🎬','🍿','🎥','📺','🌙','⭐','💫','🌟','😴','🤗',
+    '👍','👎','👏','🙌','💪','🤝','✌️','🤞','👋','💋',
+    '🎉','🎊','🥳','🎶','🎵','💃','🕺','😜','😝','🤪'
+];
+
+function buildKeyboard(rows) {
+    const rowEls = customKeyboard.querySelectorAll('.kb-row');
+    // We have 5 kb-rows in HTML (indices 0-4). We use 4 rows + 1 for emoji panel.
+    // Actually let's use 4 rows for keys, and the 5th row is hidden/used later for emoji
+    
+    rows.forEach((row, rIndex) => {
+        if (!rowEls[rIndex]) return;
+        rowEls[rIndex].innerHTML = '';
+        
+        row.forEach(key => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.classList.add('kb-key');
+            btn.setAttribute('data-key', key);
+            
+            if (key === 'SPACE') {
+                btn.classList.add('extra-wide');
+                btn.textContent = '⎵';
+            } else if (key === 'BKSP') {
+                btn.classList.add('backspace-key');
+                btn.innerHTML = '<i class="fa-solid fa-delete-left"></i>';
+            } else if (key === 'SHIFT') {
+                btn.classList.add('shift-key');
+                btn.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+                if (shiftActive) btn.classList.add('action-key');
+            } else if (key === 'ENTER') {
+                btn.classList.add('action-key', 'wide');
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+            } else if (key === '123' || key === 'ABC') {
+                btn.classList.add('action-key', 'wide');
+                btn.textContent = key;
+            } else if (key === 'EMOJI') {
+                btn.classList.add('emoji-key');
+                btn.textContent = '😊';
+            } else {
+                btn.textContent = key;
+            }
+            
+            rowEls[rIndex].appendChild(btn);
+        });
+    });
+    
+    // 5th row is for emoji panel
+    if (rowEls[4]) {
+        rowEls[4].innerHTML = '';
+        rowEls[4].classList.add('emoji-panel-row');
+        // Build emoji panel inside the 5th row
+        buildEmojiPanel(rowEls[4]);
+    }
+}
+
+function buildEmojiPanel(container) {
+    container.innerHTML = '';
+    container.style.display = 'none'; // Hidden by default
+    container.style.flexWrap = 'wrap';
+    container.style.justifyContent = 'flex-start';
+    container.style.padding = '6px';
+    container.style.maxHeight = '120px';
+    container.style.overflowY = 'auto';
+    container.style.gap = '2px';
+    
+    EMOJIS.forEach(emoji => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.classList.add('emoji-btn');
+        btn.textContent = emoji;
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            insertTextAtCursor(emoji);
+        });
+        container.appendChild(btn);
+    });
+}
+
+function refreshKeyboard() {
+    if (numbersMode) {
+        buildKeyboard(KEY_ROWS_NUMBERS);
+    } else if (shiftActive) {
+        buildKeyboard(KEY_ROWS_UPPER);
+    } else {
+        buildKeyboard(KEY_ROWS_LOWER);
+    }
+}
+
+// Place cursor at end of contenteditable
+function placeCaretAtEnd(el) {
+    el.focus();
+    if (typeof window.getSelection != 'undefined' && typeof document.createRange != 'undefined') {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+}
+
+// Insert text at current cursor position in the contenteditable
+function insertTextAtCursor(text) {
+    chatInput.focus();
+    // Use execCommand for contenteditable for better cross-browser support
+    document.execCommand('insertText', false, text);
+    // Auto scroll the text field
+    chatInput.scrollTop = chatInput.scrollHeight;
+}
+
+// Handle keyboard key presses
+function handleKeyPress(key) {
+    const emojiRow = customKeyboard.querySelector('.emoji-panel-row');
+    
+    if (key === 'SPACE') {
+        insertTextAtCursor(' ');
+    } else if (key === 'BKSP') {
+        chatInput.focus();
+        document.execCommand('delete', false);
+    } else if (key === 'SHIFT') {
+        shiftActive = !shiftActive;
+        refreshKeyboard();
+    } else if (key === 'ENTER') {
+        submitChat();
+    } else if (key === '123') {
+        numbersMode = true;
+        refreshKeyboard();
+    } else if (key === 'ABC') {
+        numbersMode = false;
+        refreshKeyboard();
+    } else if (key === 'EMOJI') {
+        // Toggle emoji panel
+        if (emojiRow) {
+            if (emojiRow.style.display === 'none' || !emojiRow.style.display) {
+                emojiRow.style.display = 'flex';
+            } else {
+                emojiRow.style.display = 'none';
+            }
+        }
+    } else {
+        insertTextAtCursor(key);
+        // Auto-lowercase after typing a letter in shift mode (like real keyboard)
+        if (shiftActive && key.length === 1 && key.match(/[A-Z]/)) {
+            shiftActive = false;
+            refreshKeyboard();
+        }
+    }
+}
+
+// Attach keyboard event delegation
+customKeyboard.addEventListener('click', (e) => {
+    const keyBtn = e.target.closest('.kb-key');
+    if (!keyBtn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const key = keyBtn.getAttribute('data-key');
+    if (key) handleKeyPress(key);
+});
+
+// Prevent default keyboard on the chat input (crucial for mobile)
+chatInput.addEventListener('focus', (e) => {
+    e.preventDefault();
+    // On mobile, blur immediately to prevent native keyboard, but keep visual focus
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        chatInput.blur();
+    }
+});
+
+// Prevent native keyboard from appearing when tapping chat input
+chatInput.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    // Set visual caret at end
+    placeCaretAtEnd(chatInput);
+});
+
+// Also prevent mousedown from triggering native keyboard on some devices
+chatInput.addEventListener('mousedown', (e) => {
+    // On non-touch devices (desktop), allow normal behavior
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) {
+        return; // Desktop — allow normal cursor positioning
+    }
+    e.preventDefault();
+    placeCaretAtEnd(chatInput);
+});
+
+// Initialize keyboard on load
+refreshKeyboard();
+
+// ===== CONTROLS AUTO-HIDE SYSTEM =====
+// When user clicks Video Only or Chat & Video, hide all floating controls.
+// Tap on the video area to bring them back.
+
+function hideControls() {
+    controlsHidden = true;
+    videoControlsTop.classList.add('controls-hidden');
+    roomInfoBadge.classList.add('controls-hidden');
+    // Show tap overlay to catch taps to bring controls back
+    tapOverlay.style.display = 'block';
+}
+
+function showControls() {
+    controlsHidden = false;
+    videoControlsTop.classList.remove('controls-hidden');
+    roomInfoBadge.classList.remove('controls-hidden');
+    tapOverlay.style.display = 'none';
+    
+    // Auto-hide again after 4 seconds of inactivity
+    clearTimeout(controlsAutoHideTimer);
+    controlsAutoHideTimer = setTimeout(() => {
+        if (!controlsHidden) {
+            hideControls();
+        }
+    }, 4000);
+}
+
+let controlsAutoHideTimer = null;
+
+// Tap overlay — tap to bring controls back
+tapOverlay.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showControls();
+});
+
+// Also handle touch events for mobile
+tapOverlay.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showControls();
+});
 
 // Initialize App
 function init() {
@@ -78,7 +341,7 @@ function init() {
             setupConnectionHandlers();
             
             conn.on('open', () => {
-                addSystemMessage('Partner joined the room!');
+                addSystemMessage('Your love joined the room! ❤️');
                 // Send current video state to guest once the connection is open
                 conn.send({
                     type: 'init_video',
@@ -167,7 +430,7 @@ joinRoomBtn.addEventListener('click', () => {
     const hostId = window.location.hash.substring(1);
     
     joinRoomBtn.disabled = true;
-    joinRoomBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to Host...';
+    joinRoomBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to your love...';
     
     conn = peer.connect(hostId);
     setupConnectionHandlers();
@@ -368,6 +631,12 @@ function toggleLayout(showChat) {
             layoutSpan.textContent = 'Chat & Video';
         }
     }
+    
+    // HIDE CONTROLS after toggling layout (user wants immersive view)
+    // Small delay so user can see the transition
+    setTimeout(() => {
+        hideControls();
+    }, 600);
 }
 
 // Layout / Chat Toggle
@@ -414,7 +683,13 @@ function toggleFullScreen() {
     }
 }
 
-topFullscreenBtn.addEventListener('click', toggleFullScreen);
+topFullscreenBtn.addEventListener('click', () => {
+    toggleFullScreen();
+    // Also hide controls after fullscreen toggle
+    setTimeout(() => {
+        hideControls();
+    }, 600);
+});
 
 function updateFullscreenButton() {
     const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
@@ -459,6 +734,7 @@ chatForm.addEventListener('submit', (e) => {
     submitChat();
 });
 
+// On desktop, still allow physical keyboard input into the chat input
 chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
