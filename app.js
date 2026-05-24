@@ -292,6 +292,13 @@ refreshKeyboard();
 
 function hideControls() {
     controlsHidden = true;
+    videoControlsTop.classList.add('controls-hidden');
+    // Show tap overlay to catch taps to bring controls back
+    tapOverlay.style.display = 'block';
+}
+
+function showControls() {
+    controlsHidden = false;
     videoControlsTop.classList.remove('controls-hidden');
     tapOverlay.style.display = 'none';
     
