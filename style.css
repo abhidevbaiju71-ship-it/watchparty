@@ -308,6 +308,12 @@ body, html {
     position: relative;
     background: #000;
 }
+#video-container.video-fullscreen {
+    /* Absolute forcing destruction of any black fractional borders */
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+}
 
 video {
     width: 100%;
@@ -653,30 +659,36 @@ video {
 .custom-keyboard {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 3px 2px;
+    gap: 1.5px;
+    padding: 2.5px 2px;
     background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
     border-top: 1px solid rgba(255,255,255,0.06);
-    flex-shrink: 0; /* Do NOT grow or shrink — take exactly what you need */
+    flex-shrink: 0; 
+    /* Important flex configuration to make sure it smoothly squishes into its constraints */
+    height: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .kb-row {
     display: flex;
     justify-content: center;
-    gap: 3px;
+    gap: 2px;
+    flex: 1;
+    min-height: 0;
 }
 
 .kb-key {
     background: rgba(255,255,255,0.1);
     color: #fff;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px; /* Slightly softer corners for condensed fit */
     font-family: 'Outfit', sans-serif;
-    font-size: 16px;
+    font-size: min(16px, 3vh); /* Scales font naturally inside shrinking rows */
     font-weight: 500;
-    min-width: 28px;
-    height: 32px; /* Fixed height that fits properly */
-    padding: 0 5px;
+    min-width: 20px;
+    height: 100%; /* Height takes exactly the percentage of the responsive row */
+    padding: 0 4px;
     cursor: pointer;
     display: flex;
     align-items: center;

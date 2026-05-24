@@ -311,9 +311,19 @@ tapOverlay.addEventListener('touchend', (e) => {
 function init() {
     const hash = window.location.hash.substring(1);
     
-    // Create Peer using default configuration. 
-    // This allows PeerJS to connect quickly natively using its internal optimal fallbacks.
-    peer = new Peer({ debug: 2 });
+    // Create Peer with robust STUN and free Metered TURN servers for strict networks
+    peer = new Peer({ 
+        debug: 2,
+        config: {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: "turn:openrelay.metered.ca:80", username: "openrelayproject", credential: "openrelayproject" },
+                { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" },
+                { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelayproject", credential: "openrelayproject" }
+            ]
+        }
+    });
     
     peer.on('open', (id) => {
         loadingState.classList.add('hidden');
@@ -629,9 +639,11 @@ function onYtStateChange(event) {
 function toggleLayout(showChat) {
     const layoutIcon = topLayoutBtn.querySelector('i');
     const layoutSpan = topLayoutBtn.querySelector('span');
+    const videoContainer = document.getElementById('video-container');
     
     if (showChat) {
         chatContainer.classList.remove('hidden');
+        videoContainer.classList.remove('video-fullscreen');
         topLayoutBtn.classList.add('active');
         if (layoutIcon) {
             layoutIcon.className = 'fa-solid fa-video';
@@ -641,6 +653,7 @@ function toggleLayout(showChat) {
         }
     } else {
         chatContainer.classList.add('hidden');
+        videoContainer.classList.add('video-fullscreen');
         topLayoutBtn.classList.remove('active');
         if (layoutIcon) {
             layoutIcon.className = 'fa-solid fa-table-columns';
