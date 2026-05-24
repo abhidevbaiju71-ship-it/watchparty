@@ -33,7 +33,6 @@ const videoControlsTop = document.getElementById('video-controls-top');
 const tapOverlay = document.getElementById('tap-overlay');
 
 const chatContainer = document.getElementById('chat-container');
-const closeChatBtn = document.getElementById('close-chat-btn');
 const chatMessages = document.getElementById('chat-messages');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
@@ -723,9 +722,7 @@ topLayoutBtn.addEventListener('click', () => {
     toggleLayout(isChatHidden);
 });
 
-closeChatBtn.addEventListener('click', () => {
-    toggleLayout(false);
-});
+
 
 // Share Badge Control
 topShareBtn.addEventListener('click', () => {
