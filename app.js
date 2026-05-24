@@ -311,17 +311,9 @@ tapOverlay.addEventListener('touchend', (e) => {
 function init() {
     const hash = window.location.hash.substring(1);
     
-    // Create Peer with STUN servers for robust production NAT traversal (crucial for Mobile Networks)
-    peer = new Peer({ 
-        debug: 2,
-        config: {
-            'iceServers': [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' }
-            ]
-        }
-    });
+    // Create Peer using default configuration. 
+    // This allows PeerJS to connect quickly natively using its internal optimal fallbacks.
+    peer = new Peer({ debug: 2 });
     
     peer.on('open', (id) => {
         loadingState.classList.add('hidden');

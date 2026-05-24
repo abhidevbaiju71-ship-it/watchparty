@@ -656,6 +656,9 @@ video {
     background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
     border-top: 1px solid rgba(255,255,255,0.06);
     flex-shrink: 0;
+    position: fixed;
+    bottom: 0; left: 0; width: 100%;
+    z-index: 200;
 }
 
 .kb-row {
@@ -776,25 +779,25 @@ video {
         flex-direction: column;
     }
     #video-container {
-        flex: 0 0 75%;
-        height: 75%;
+        flex: 1 1 auto;
+        min-height: 50%;
         width: 100%;
     }
     #chat-container {
-        flex: 0 0 25%;
-        height: 25%;
+        flex: 0 0 auto;
+        height: min-content;
+        max-height: 50%;
         width: 100%;
         border-left: none;
         border-top: 1px solid rgba(255,255,255,0.1);
     }
     .chat-input-area {
-        padding-bottom: env(safe-area-inset-bottom, 4px);
-        overflow-y: auto;
+        padding-bottom: env(safe-area-inset-bottom, 40px);
+        overflow-y: visible;
     }
-    /* In portrait, messages area gets squeezed by keyboard */
     .chat-messages {
-        flex: 1;
-        min-height: 40px;
+        flex: 1 1 100px;
+        min-height: 80px;
     }
 }
 
@@ -804,17 +807,18 @@ video {
         flex-direction: row;
     }
     #video-container {
-        flex: 0 0 75%;
-        width: 75%;
+        flex: 1 1 auto;
+        width: auto;
         height: 100%;
     }
     #chat-container {
-        flex: 0 0 25%;
+        flex: 0 0 400px;
+        max-width: 45%;
         height: 100%;
-        width: 25%;
-        max-width: none;
+        border-top: none;
+        border-left: 1px solid rgba(255,255,255,0.1);
     }
     .chat-input-area {
-        overflow-y: auto;
+        padding-bottom: env(safe-area-inset-bottom, 10px);
     }
 }
