@@ -440,6 +440,7 @@ createRoomBtn.addEventListener('click', () => {
     }
 
     setupScreen.classList.remove('active');
+    playerScreen.classList.add('active');
     setupVideo(currentMediaType, url);
 });
 
@@ -471,6 +472,8 @@ guestMediaFileInput.addEventListener('change', (e) => {
         
         requestFullScreen();
         setupVideo('local', url);
+        setupScreen.classList.remove('active');
+        playerScreen.classList.add('active');
         
         guestFileGroup.classList.add('hidden');
     } else {
@@ -512,6 +515,7 @@ function setupConnectionHandlers() {
             } else {
                 requestFullScreen();
                 setupVideo(data.mediaType, data.url);
+                setupScreen.classList.remove('active');
                 playerScreen.classList.add('active');
             }
         }
