@@ -375,7 +375,7 @@ function init() {
                     mediaType: currentMediaType,
                     url: currentMediaType === 'direct' || currentMediaType === 'youtube' ? mediaUrlInput.value : null
                 });
-                // Send current video state to guest once the connection is open
+            });
         }
     });
 
