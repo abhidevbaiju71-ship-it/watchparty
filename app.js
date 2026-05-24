@@ -19,14 +19,10 @@ const joinRoomBtn = document.getElementById('join-room-btn');
 
 const nativePlayer = document.getElementById('native-player');
 const ytContainer = document.getElementById('youtube-player');
-const roomIdDisplay = document.getElementById('room-id-display');
 const copyInviteBtn = document.getElementById('copy-invite-btn');
-const closeShareBtn = document.getElementById('close-share-btn');
-const roomInfoBadge = document.getElementById('room-info-badge');
 
 // Top Video Controls Elements
 const topRotationBtn = document.getElementById('top-rotation-btn');
-const topShareBtn = document.getElementById('top-share-btn');
 const topLayoutBtn = document.getElementById('top-layout-btn');
 const topFullscreenBtn = document.getElementById('top-fullscreen-btn');
 const videoControlsTop = document.getElementById('video-controls-top');
@@ -136,9 +132,24 @@ function buildEmojiPanel(container) {
     container.style.flexWrap = 'wrap';
     container.style.justifyContent = 'flex-start';
     container.style.padding = '6px';
-    container.style.maxHeight = '120px';
+    container.style.flex = '1';
     container.style.overflowY = 'auto';
     container.style.gap = '2px';
+    
+    // Add "Back to Keyboard" button
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.classList.add('emoji-btn', 'action-key');
+    backBtn.innerHTML = '<i class="fa-solid fa-keyboard"></i> ABC';
+    backBtn.style.width = '100%';
+    backBtn.style.padding = '8px';
+    backBtn.style.marginBottom = '8px';
+    backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleKeyPress('EMOJI'); // Trigger toggle back
+    });
+    container.appendChild(backBtn);
     
     EMOJIS.forEach(emoji => {
         const btn = document.createElement('button');
@@ -207,11 +218,23 @@ function handleKeyPress(key) {
         refreshKeyboard();
     } else if (key === 'EMOJI') {
         // Toggle emoji panel
+        const row1 = document.getElementById('kb-row-1');
+        const row2 = document.getElementById('kb-row-2');
+        const row3 = document.getElementById('kb-row-3');
+        const row4 = document.getElementById('kb-row-4');
         if (emojiRow) {
             if (emojiRow.style.display === 'none' || !emojiRow.style.display) {
                 emojiRow.style.display = 'flex';
+                if(row1) row1.style.display = 'none';
+                if(row2) row2.style.display = 'none';
+                if(row3) row3.style.display = 'none';
+                if(row4) row4.style.display = 'none';
             } else {
                 emojiRow.style.display = 'none';
+                if(row1) row1.style.display = 'flex';
+                if(row2) row2.style.display = 'flex';
+                if(row3) row3.style.display = 'flex';
+                if(row4) row4.style.display = 'flex';
             }
         }
     } else {
@@ -269,16 +292,7 @@ refreshKeyboard();
 
 function hideControls() {
     controlsHidden = true;
-    videoControlsTop.classList.add('controls-hidden');
-    roomInfoBadge.classList.add('controls-hidden');
-    // Show tap overlay to catch taps to bring controls back
-    tapOverlay.style.display = 'block';
-}
-
-function showControls() {
-    controlsHidden = false;
     videoControlsTop.classList.remove('controls-hidden');
-    roomInfoBadge.classList.remove('controls-hidden');
     tapOverlay.style.display = 'none';
     
     // Auto-hide again after 4 seconds of inactivity
@@ -361,12 +375,7 @@ function init() {
                     mediaType: currentMediaType,
                     url: currentMediaType === 'direct' || currentMediaType === 'youtube' ? mediaUrlInput.value : null
                 });
-                // Auto-hide the share badge when partner joins to keep layout clean
-                if (roomInfoBadge) {
-                    roomInfoBadge.classList.add('hidden');
-                    topShareBtn.classList.remove('active');
-                }
-            });
+                // Send current video state to guest once the connection is open
         }
     });
 
@@ -431,10 +440,6 @@ createRoomBtn.addEventListener('click', () => {
     }
 
     setupScreen.classList.remove('active');
-    playerScreen.classList.add('active');
-    
-    roomIdDisplay.textContent = 'Room: ' + peer.id;
-    
     setupVideo(currentMediaType, url);
 });
 
@@ -467,17 +472,7 @@ guestMediaFileInput.addEventListener('change', (e) => {
         requestFullScreen();
         setupVideo('local', url);
         
-        setupScreen.classList.remove('active');
-        playerScreen.classList.add('active');
-        roomIdDisplay.textContent = 'Connected to Host';
-        
         guestFileGroup.classList.add('hidden');
-        
-        // Hide share badge for Guest by default
-        if (roomInfoBadge) {
-            roomInfoBadge.classList.add('hidden');
-            topShareBtn.classList.remove('active');
-        }
     } else {
         guestFileNameDisplay.textContent = "Choose Video File";
     }
@@ -517,15 +512,7 @@ function setupConnectionHandlers() {
             } else {
                 requestFullScreen();
                 setupVideo(data.mediaType, data.url);
-                setupScreen.classList.remove('active');
                 playerScreen.classList.add('active');
-                roomIdDisplay.textContent = 'Connected to Host';
-                
-                // Hide share badge for Guest by default
-                if (roomInfoBadge) {
-                    roomInfoBadge.classList.add('hidden');
-                    topShareBtn.classList.remove('active');
-                }
             }
         }
     });
@@ -724,21 +711,7 @@ topLayoutBtn.addEventListener('click', () => {
 
 
 
-// Share Badge Control
-topShareBtn.addEventListener('click', () => {
-    roomInfoBadge.classList.toggle('hidden');
-    const isHidden = roomInfoBadge.classList.contains('hidden');
-    if (isHidden) {
-        topShareBtn.classList.remove('active');
-    } else {
-        topShareBtn.classList.add('active');
-    }
-});
 
-closeShareBtn.addEventListener('click', () => {
-    roomInfoBadge.classList.add('hidden');
-    topShareBtn.classList.remove('active');
-});
 
 // Fullscreen (Resize) Control
 function toggleFullScreen() {
