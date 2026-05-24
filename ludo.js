@@ -61,6 +61,20 @@ const turnIndicator = document.getElementById('turn-indicator');
 const canvas = document.getElementById('ludo-board');
 const ctx = canvas.getContext('2d');
 
+// Chat DOM
+const chatToggleBtn = document.getElementById('chat-toggle-btn');
+const chatDrawer = document.getElementById('chat-drawer');
+const chatOverlay = document.getElementById('chat-overlay');
+const chatCloseBtn = document.getElementById('chat-close-btn');
+const chatMessagesArea = document.getElementById('ludo-chat-messages');
+const chatForm = document.getElementById('ludo-chat-form');
+const chatInput = document.getElementById('ludo-chat-input');
+const gifToggleBtn = document.getElementById('gif-toggle-btn');
+const gifPickerArea = document.getElementById('gif-picker-area');
+const gifSearch = document.getElementById('gif-search');
+const gifResults = document.getElementById('gif-results');
+const chatBadge = document.getElementById('chat-badge');
+
 let peer = null, conn = null, isHost = false;
 let myColor = 'red', oppColor = 'blue';
 let cellSize = 0;
@@ -70,6 +84,7 @@ let state = {
   turn: 'red', // whose turn
   dice: 0,
   rolled: false, // has current player rolled?
+  consecutiveRolls: 0, // max 2 extra rolls allowed
   pieces: {
     red: [-1,-1,-1,-1],   // -1=base, 0-50=track, 51-56=home stretch, 57=HOME
     blue: [-1,-1,-1,-1]
@@ -100,7 +115,19 @@ function initPeer() {
   });
 
   peer.on('connection', c => {
-    if (isHost) { conn = c; setupConn(); conn.on('open', () => startGame()); }
+    if (isHost) { 
+        if (conn && conn.open) {
+            console.warn("Blocked a trespasser from joining a full room.");
+            c.on('open', () => {
+                c.send({ type: 'error', message: 'Room is already full.' });
+                setTimeout(() => c.close(), 500);
+            });
+            return;
+        }
+        conn = c; 
+        setupConn(); 
+        conn.on('open', () => startGame()); 
+    }
   });
 
   peer.on('error', e => { alert('Connection error: ' + e.message); });
@@ -108,10 +135,22 @@ function initPeer() {
 
 function setupConn() {
   conn.on('data', d => {
+    if (d.type === 'error') {
+        alert(d.message);
+        window.location.href = 'ludo.html';
+        return;
+    }
     if (d.type === 'state') { state = d.state; onStateUpdate(); }
     if (d.type === 'start') startGame();
+    if (d.type === 'chat') handlePeerChat(d);
   });
-  conn.on('close', () => showToast('Partner disconnected'));
+  conn.on('close', () => {
+      showToast('Partner disconnected');
+      if (isHost) conn = null;
+  });
+  conn.on('error', () => {
+      if (isHost) conn = null;
+  });
 }
 
 function sendState() {
@@ -404,7 +443,12 @@ function drawPieces() {
 
 function getPieceXY(color, pieceIdx) {
   const s = cellSize;
-  const posVal = state.pieces[color][pieceIdx];
+  let posVal = state.pieces[color][pieceIdx];
+
+  if (animState && animState.color === color && animState.idx === pieceIdx) {
+    posVal = animState.pos;
+  }
+
   if (posVal === -1) {
     const [br, bc] = BASE_POS[color][pieceIdx];
     return { x: bc*s+s/2, y: br*s+s/2 };
@@ -445,45 +489,90 @@ function hasAnyMove(color, dice) {
   return false;
 }
 
-function movePiece(color, idx, dice) {
+// Animation helper vars
+let isAnimating = false;
+let animState = null; // { color, idx, posVal }
+
+async function movePiece(color, idx, dice) {
+  if (isAnimating) return; // Prevent concurrent processing
   const pos = state.pieces[color][idx];
+  
   if (pos === -1 && dice === 6) {
-    state.pieces[color][idx] = 0; // Enter board at start
-    showToast(`${color === myColor ? 'You' : 'Partner'} entered a piece!`);
+    await animateStepByStep(color, idx, pos, 0);
+    resolveMoveRules(color, idx, 0, dice);
   } else {
-    const newPos = pos + dice;
-    state.pieces[color][idx] = newPos;
-    // Check capture on outer track
-    if (newPos < 51) {
-      const absIdx = (START_IDX[color] + newPos) % 52;
-      if (!SAFE_SPOTS.has(absIdx)) {
-        const opp = color === 'red' ? 'blue' : 'red';
-        for (let i = 0; i < 4; i++) {
-          const oppPos = state.pieces[opp][i];
-          if (oppPos >= 0 && oppPos < 51) {
-            const oppAbs = (START_IDX[opp] + oppPos) % 52;
-            if (oppAbs === absIdx) {
-              state.pieces[opp][i] = -1; // Send back to base
-              showToast(`💥 ${color === myColor ? 'You' : 'Partner'} captured a piece!`);
-            }
+    const targetPos = pos + dice;
+    await animateStepByStep(color, idx, pos, targetPos);
+    resolveMoveRules(color, idx, targetPos, dice);
+  }
+}
+
+async function animateStepByStep(color, idx, startPos, endPos) {
+  isAnimating = true;
+  // Temporary state for the animating piece
+  animState = { color, idx, pos: startPos };
+
+  if (startPos === -1) {
+    // Jump straight to 0 visually
+    animState.pos = 0;
+    drawBoard();
+    await delay(300);
+  } else {
+    // Move step by step
+    for (let p = startPos + 1; p <= endPos; p++) {
+      animState.pos = p;
+      drawBoard();
+      await delay(200); 
+    }
+  }
+  
+  isAnimating = false;
+  animState = null;
+}
+
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function resolveMoveRules(color, idx, finalPos, dice) {
+  state.pieces[color][idx] = finalPos;
+  let gotCapture = false;
+
+  if (finalPos === 0 && dice === 6) {
+    showToast(`${color === myColor ? 'You' : 'Partner'} entered a piece!`);
+  }
+
+  if (finalPos > 0 && finalPos < 51) {
+    const absIdx = (START_IDX[color] + finalPos) % 52;
+    if (!SAFE_SPOTS.has(absIdx)) {
+      const opp = color === 'red' ? 'blue' : 'red';
+      for (let i = 0; i < 4; i++) {
+        const oppPos = state.pieces[opp][i];
+        if (oppPos >= 0 && oppPos < 51) {
+          const oppAbs = (START_IDX[opp] + oppPos) % 52;
+          if (oppAbs === absIdx) {
+            state.pieces[opp][i] = -1; // capture
+            gotCapture = true;
+            showToast(`💥 ${color === myColor ? 'You' : 'Partner'} captured a piece!`);
           }
         }
       }
     }
-    if (newPos === 57) {
-      showToast(`🏠 Piece reached home!`);
-    }
   }
+  
+  if (finalPos === 57) showToast(`🏠 Piece reached home!`);
+  if (state.pieces[color].every(p => p >= 57)) state.winner = color;
 
-  // Check win
-  if (state.pieces[color].every(p => p >= 57)) {
-    state.winner = color;
-  }
-
-  // Next turn
-  if (dice !== 6) {
+  // Next turn logic (Max 2 consecutive extra rolls)
+  if ((dice === 6 || gotCapture) && state.consecutiveRolls < 2) {
+    state.consecutiveRolls++;
+    showToast('Extra Roll! 🎲');
+  } else {
+    // End sequence, turn changes
+    state.consecutiveRolls = 0;
     state.turn = color === 'red' ? 'blue' : 'red';
   }
+
   state.rolled = false;
   state.dice = 0;
 
@@ -622,6 +711,125 @@ function showWin() {
     </div>
   `;
   document.body.appendChild(overlay);
+}
+
+// ===== CHAT & GIF SYSTEM =====
+let unreadMessages = 0;
+
+function toggleChat() {
+  const isOpen = chatDrawer.classList.contains('open');
+  if (isOpen) {
+    chatDrawer.classList.remove('open');
+    setTimeout(() => chatOverlay.classList.remove('active'), 300);
+  } else {
+    chatOverlay.classList.add('active');
+    setTimeout(() => chatDrawer.classList.add('open'), 10);
+    unreadMessages = 0;
+    if (chatBadge) {
+        chatBadge.classList.add('hidden');
+    }
+    chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
+  }
+}
+
+if (chatToggleBtn) chatToggleBtn.addEventListener('click', toggleChat);
+if (chatCloseBtn) chatCloseBtn.addEventListener('click', toggleChat);
+if (chatOverlay) chatOverlay.addEventListener('click', toggleChat);
+
+function appendChatMsg(text, gifUrl, isSelf) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `chat-msg ${isSelf ? 'self' : 'other'}`;
+  if (text) {
+    const textNode = document.createTextNode(text);
+    msgDiv.appendChild(textNode);
+  }
+  if (gifUrl) {
+    const img = document.createElement('img');
+    img.src = gifUrl;
+    msgDiv.appendChild(img);
+  }
+  chatMessagesArea.appendChild(msgDiv);
+  chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
+
+  if (!isSelf && !chatDrawer.classList.contains('open')) {
+    unreadMessages++;
+    if (chatBadge) {
+        chatBadge.textContent = unreadMessages;
+        chatBadge.classList.remove('hidden');
+    }
+    if (chatToggleBtn) {
+        chatToggleBtn.style.transform = 'scale(1.2)';
+        setTimeout(() => chatToggleBtn.style.transform = '', 200);
+    }
+  }
+}
+
+function handlePeerChat(data) {
+  appendChatMsg(data.text, data.gif, false);
+}
+
+if (chatForm) {
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+      appendChatMsg(text, null, true);
+      if (conn && conn.open) conn.send({ type: 'chat', text: text, gif: null });
+      chatInput.value = '';
+    });
+}
+
+// TENOR API
+const TENOR_KEY = 'LIVDSRZULELA';
+let gifDebounce;
+
+if (gifToggleBtn) {
+    gifToggleBtn.addEventListener('click', () => {
+      gifPickerArea.classList.toggle('hidden');
+      if (!gifPickerArea.classList.contains('hidden')) {
+        gifSearch.focus();
+        if (gifResults.innerHTML.includes('Loading')) fetchGifs('excited');
+      }
+    });
+}
+
+if (gifSearch) {
+    gifSearch.addEventListener('input', () => {
+      clearTimeout(gifDebounce);
+      const q = gifSearch.value.trim() || 'excited';
+      gifDebounce = setTimeout(() => fetchGifs(q), 500);
+    });
+}
+
+async function fetchGifs(query) {
+  if (!gifResults) return;
+  gifResults.innerHTML = '<div class="gif-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+  try {
+    const res = await fetch(`https://g.tenor.com/v1/search?q=${encodeURIComponent(query)}&key=${TENOR_KEY}&limit=20`);
+    const data = await res.json();
+    gifResults.innerHTML = '';
+    if (data.results && data.results.length > 0) {
+      data.results.forEach(gif => {
+        const url = gif.media[0].tinygif.url;
+        const img = document.createElement('img');
+        img.className = 'gif-result-img';
+        img.src = url;
+        img.addEventListener('click', () => sendGif(url));
+        gifResults.appendChild(img);
+      });
+    } else {
+      gifResults.innerHTML = '<div class="gif-loading">No GIFs found</div>';
+    }
+  } catch (err) {
+    gifResults.innerHTML = '<div class="gif-loading">Failed to load GIFs</div>';
+  }
+}
+
+function sendGif(url) {
+  appendChatMsg(null, url, true);
+  if (conn && conn.open) conn.send({ type: 'chat', text: null, gif: url });
+  if (gifPickerArea) gifPickerArea.classList.add('hidden');
+  if (chatInput) chatInput.focus();
 }
 
 // ===== INIT =====

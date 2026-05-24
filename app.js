@@ -25,6 +25,7 @@ const closeShareBtn = document.getElementById('close-share-btn');
 const roomInfoBadge = document.getElementById('room-info-badge');
 
 // Top Video Controls Elements
+const topRotationBtn = document.getElementById('top-rotation-btn');
 const topShareBtn = document.getElementById('top-share-btn');
 const topLayoutBtn = document.getElementById('top-layout-btn');
 const topFullscreenBtn = document.getElementById('top-fullscreen-btn');
@@ -332,11 +333,22 @@ function init() {
             // Host Mode
             isHost = true;
             hostPanel.classList.remove('hidden');
+            if (topRotationBtn) topRotationBtn.classList.remove('hidden');
         }
     });
 
     peer.on('connection', (connection) => {
         if (isHost) {
+            // SECURITY CHECK: If a partner is already connected, lock the room
+            if (conn && conn.open) {
+                console.warn("Blocked a trespasser from joining a full room.");
+                connection.on('open', () => {
+                    connection.send({ type: 'error', message: 'Room is already full. Intruder blocked!' });
+                    setTimeout(() => connection.close(), 500);
+                });
+                return;
+            }
+
             conn = connection;
             setupConnectionHandlers();
             
@@ -468,7 +480,21 @@ function setupConnectionHandlers() {
         console.log('Connected to peer');
     });
 
+    conn.on('close', () => {
+        addSystemMessage('Your partner disconnected.');
+        if (isHost) conn = null; // Free up room for reconnection
+    });
+    
+    conn.on('error', () => {
+        if (isHost) conn = null; // Free up room for reconnection
+    });
+
     conn.on('data', (data) => {
+        if (data.type === 'error') {
+            alert(data.message);
+            window.location.href = window.location.pathname; // kick out
+            return;
+        }
         if (data.type === 'chat') {
             addMessage(data.text, false);
         } else if (data.type === 'sync') {
@@ -717,6 +743,41 @@ function updateFullscreenButton() {
 
 document.addEventListener('fullscreenchange', updateFullscreenButton);
 document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+
+// Rotation Lock Control
+let rotationLocked = false;
+if (topRotationBtn) {
+    topRotationBtn.addEventListener('click', async () => {
+        try {
+            if (!rotationLocked) {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock(screen.orientation.type);
+                    rotationLocked = true;
+                    topRotationBtn.classList.add('active');
+                    const icon = topRotationBtn.querySelector('i');
+                    if (icon) icon.className = 'fa-solid fa-lock';
+                    const span = topRotationBtn.querySelector('span');
+                    if (span) span.textContent = 'Unlock Rot.';
+                } else {
+                    alert("Screen orientation lock is not supported on this device/browser.");
+                }
+            } else {
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                    rotationLocked = false;
+                    topRotationBtn.classList.remove('active');
+                    const icon = topRotationBtn.querySelector('i');
+                    if (icon) icon.className = 'fa-solid fa-lock-open';
+                    const span = topRotationBtn.querySelector('span');
+                    if (span) span.textContent = 'Lock Rot.';
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Could not lock screen orientation. Ensure you are in fullscreen or the device supports it.");
+        }
+    });
+}
 
 function submitChat() {
     const text = chatInput.innerText.trim();

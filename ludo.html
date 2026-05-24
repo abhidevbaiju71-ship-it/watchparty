@@ -87,6 +87,40 @@
             </div>
 
             <div id="game-toast" class="game-toast hidden"></div>
+
+            <!-- Chat Toggle Button -->
+            <button id="chat-toggle-btn" class="chat-toggle-btn">
+                <i class="fa-solid fa-message"></i>
+                <span id="chat-badge" class="chat-badge hidden">!</span>
+            </button>
+
+            <!-- Chat Drawer (Floating Box) -->
+            <div id="chat-overlay" class="chat-overlay hidden"></div>
+            <div id="chat-drawer" class="chat-drawer hidden">
+                <div class="chat-drawer-header">
+                    <h3><i class="fa-solid fa-comments"></i> Love Chat</h3>
+                    <button id="chat-close-btn" class="chat-close-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="ludo-chat-messages" class="chat-messages-area">
+                    <div class="chat-sys-msg">Chat connected securely! ❤️</div>
+                </div>
+                
+                <div id="gif-picker-area" class="gif-picker-area hidden">
+                    <div class="gif-search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="gif-search" placeholder="Search GIFs...">
+                    </div>
+                    <div id="gif-results" class="gif-results">
+                        <div class="gif-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+                    </div>
+                </div>
+
+                <form id="ludo-chat-form" class="ludo-chat-input-area">
+                    <button type="button" id="gif-toggle-btn" class="gif-toggle-btn" title="Send GIF"><i class="fa-solid fa-images"></i></button>
+                    <input type="text" id="ludo-chat-input" placeholder="Message..." autocomplete="off">
+                    <button type="submit" id="chat-send-btn" class="chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
+            </div>
         </div>
     </div>
 
