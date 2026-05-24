@@ -294,7 +294,6 @@ body, html {
     width: 100%;
     height: 100%;
     background: #000;
-    display: flex;
 }
 
 #video-container {
