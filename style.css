@@ -664,7 +664,7 @@ video {
     background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
     border-top: 1px solid rgba(255,255,255,0.06);
     flex: 0 0 auto;
-    max-height: 200px;
+    height: 240px;
 }
 
 .kb-row {
@@ -807,10 +807,10 @@ video {
         flex-direction: row;
     }
 
-    /* Chat gets a fixed 25vw. Video auto-gets 75vw via flex:1. */
+    /* Chat gets a fixed 30vw. Video auto-gets 70vw via flex:1. */
     #chat-container {
-        flex: 0 0 25vw;
-        width: 25vw;
+        flex: 0 0 30vw;
+        width: 30vw;
         height: 100%;
         border-top: none;
         border-left: 1px solid rgba(255,255,255,0.1);
