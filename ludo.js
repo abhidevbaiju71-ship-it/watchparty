@@ -31,7 +31,6 @@ const HOME_STRETCH = {
 // Track index where each color ENTERS the board (on rolling 6 from base)
 const START_IDX = { red: 0, green: 13, blue: 26, yellow: 39 };
 // Track index AFTER which a color enters home stretch
-const HOME_ENTRY_IDX = { red: 50, green: 11, blue: 24, yellow: 37 };
 // Safe spots (star positions + start positions)
 const SAFE_SPOTS = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
 
@@ -149,6 +148,8 @@ function setupConn() {
     if (d.type === 'state') { state = d.state; onStateUpdate(); }
     if (d.type === 'start') startGame();
     if (d.type === 'chat') handlePeerChat(d);
+    if (d.type === 'dice') handlePeerDice(d.value);
+    if (d.type === 'move') handlePeerMove(d.color, d.idx, d.dice, d.startPos);
   });
   conn.on('close', () => {
       showToast('Partner disconnected');
@@ -354,37 +355,7 @@ function drawStartArrow(color) {
   ctx.fillText('▶', c*s+s/2, r*s+s/2);
 }
 
-function getPiecePos(color, posVal) {
-  const s = cellSize;
-  if (posVal === -1) {
-    // In base - find which base slot
-    const pIdx = state.pieces[color].filter((v,i2) => v===-1).length;
-    // Use incrementing index
-    let baseIdx = 0;
-    for (let i = 0; i < state.pieces[color].length; i++) {
-      if (state.pieces[color][i] === -1) {
-        const [br, bc] = BASE_POS[color][baseIdx];
-        baseIdx++;
-        if (state.pieces[color][i] === posVal) return { x: bc*s+s/2, y: br*s+s/2 };
-      }
-    }
-    return { x: BASE_POS[color][0][1]*s+s/2, y: BASE_POS[color][0][0]*s+s/2 };
-  }
-  if (posVal >= 51) {
-    // Home stretch
-    const hsIdx = posVal - 51;
-    if (hsIdx < HOME_STRETCH[color].length) {
-      const [r,c] = HOME_STRETCH[color][hsIdx];
-      return { x: c*s+s/2, y: r*s+s/2 };
-    }
-    // HOME (center) = 57
-    return { x: 7.5*s, y: 7.5*s };
-  }
-  // On outer track - convert from player-relative to absolute
-  const absIdx = (START_IDX[color] + posVal) % 52;
-  const [r,c] = TRACK[absIdx];
-  return { x: c*s+s/2, y: r*s+s/2 };
-}
+
 
 function drawPieces() {
   const s = cellSize;
@@ -497,12 +468,16 @@ function hasAnyMove(color, dice) {
 
 // Animation helper vars
 let isAnimating = false;
+let isDiceAnimating = false;
 let animState = null; // { color, idx, posVal }
 
 async function movePiece(color, idx, dice) {
   if (isAnimating) return; // Prevent concurrent processing
   const pos = state.pieces[color][idx];
-  
+
+  // Send move to opponent so they can animate cell-by-cell too
+  if (conn && conn.open) conn.send({ type: 'move', color, idx, dice, startPos: pos });
+
   if (pos === -1 && dice === 6) {
     await animateStepByStep(color, idx, pos, 0);
     resolveMoveRules(color, idx, 0, dice);
@@ -538,6 +513,24 @@ async function animateStepByStep(color, idx, startPos, endPos) {
 
 function delay(ms) {
   return new Promise(r => setTimeout(r, ms));
+}
+
+async function handlePeerMove(color, idx, dice, startPos) {
+  // Wait for any ongoing animation to finish first
+  while (isAnimating) {
+    await delay(50);
+  }
+  const pos = startPos !== undefined ? startPos : state.pieces[color][idx];
+  let targetPos;
+  if (pos === -1 && dice === 6) {
+    targetPos = 0;
+  } else {
+    targetPos = pos + dice;
+  }
+  await animateStepByStep(color, idx, pos, targetPos);
+  // Update position locally in case state sync hasn't arrived yet
+  state.pieces[color][idx] = targetPos;
+  drawBoard();
 }
 
 function resolveMoveRules(color, idx, finalPos, dice) {
@@ -590,6 +583,7 @@ function rollDice() {
   if (state.turn !== myColor || state.rolled) return;
   rollDiceBtn.disabled = true;
   rollDiceBtn.classList.add('rolling');
+  isDiceAnimating = true;
 
   const val = Math.floor(Math.random() * 6) + 1;
   // Animate dice
@@ -601,13 +595,20 @@ function rollDice() {
       clearInterval(interval);
       diceFace.textContent = val;
       rollDiceBtn.classList.remove('rolling');
+      isDiceAnimating = false;
       state.dice = val;
       state.rolled = true;
+
+      // Send dice roll to opponent so they see the value
+      if (conn && conn.open) conn.send({ type: 'dice', value: val });
 
       if (!hasAnyMove(myColor, val)) {
         showToast('No moves available!');
         setTimeout(() => {
-          if (val !== 6) {
+          if (val === 6 && state.consecutiveRolls < 2) {
+            state.consecutiveRolls++;
+          } else {
+            state.consecutiveRolls = 0;
             state.turn = myColor === 'red' ? 'blue' : 'red';
           }
           state.rolled = false;
@@ -616,15 +617,47 @@ function rollDice() {
           onStateUpdate();
         }, 1000);
       } else {
-        diceMsg.textContent = 'Tap a piece to move';
+        // Count movable pieces
+        const movable = [];
+        for (let i = 0; i < 4; i++) {
+          if (canMovePiece(myColor, i, val)) movable.push(i);
+        }
         sendState();
         drawBoard();
+        if (movable.length === 1) {
+          diceMsg.textContent = 'Auto-moving...';
+          const attemptAutoMove = () => {
+            if (isAnimating) setTimeout(attemptAutoMove, 100);
+            else movePiece(myColor, movable[0], val);
+          };
+          setTimeout(attemptAutoMove, 400);
+        } else {
+          diceMsg.textContent = 'Tap a piece to move';
+        }
       }
     }
   }, 60);
 }
 
 rollDiceBtn.addEventListener('click', rollDice);
+
+function handlePeerDice(value) {
+  // Animate the dice on the opponent's screen
+  rollDiceBtn.classList.add('rolling');
+  isDiceAnimating = true;
+  let count = 0;
+  const interval = setInterval(() => {
+    diceFace.textContent = Math.floor(Math.random() * 6) + 1;
+    count++;
+    if (count > 10) {
+      clearInterval(interval);
+      diceFace.textContent = value;
+      rollDiceBtn.classList.remove('rolling');
+      isDiceAnimating = false;
+      diceMsg.textContent = 'Partner rolled!';
+    }
+  }, 60);
+}
 
 // ===== PIECE SELECTION VIA CANVAS TAP =====
 canvas.addEventListener('click', e => {
@@ -670,6 +703,8 @@ function onStateUpdate() {
 }
 
 function updateUI() {
+  if (isDiceAnimating) return; // Don't interrupt dice animation
+  
   const isMyTurn = state.turn === myColor;
   rollDiceBtn.disabled = !isMyTurn || state.rolled;
   turnIndicator.textContent = isMyTurn ? 'Your Turn' : "Partner's Turn";
@@ -689,8 +724,13 @@ function updateUI() {
   } else if (isMyTurn && state.rolled) {
     diceMsg.textContent = 'Tap a piece';
   } else {
-    diceMsg.textContent = 'Waiting...';
-    if (!state.rolled) diceFace.textContent = '⏳';
+    if (state.rolled && state.dice) {
+      diceMsg.textContent = 'Partner rolled!';
+      diceFace.textContent = state.dice;
+    } else {
+      diceMsg.textContent = 'Waiting...';
+      diceFace.textContent = '⏳';
+    }
   }
 }
 
@@ -703,6 +743,7 @@ function showToast(msg) {
 }
 
 function showWin() {
+  if (document.querySelector('.win-overlay')) return;
   const isMe = state.winner === myColor;
   const overlay = document.createElement('div');
   overlay.className = 'win-overlay';
@@ -726,8 +767,14 @@ function toggleChat() {
   const isOpen = chatDrawer.classList.contains('open');
   if (isOpen) {
     chatDrawer.classList.remove('open');
-    setTimeout(() => chatOverlay.classList.remove('active'), 300);
+    setTimeout(() => {
+      chatOverlay.classList.remove('active');
+      chatOverlay.classList.add('hidden');
+      chatDrawer.classList.add('hidden');
+    }, 300);
   } else {
+    chatOverlay.classList.remove('hidden');
+    chatDrawer.classList.remove('hidden');
     chatOverlay.classList.add('active');
     setTimeout(() => chatDrawer.classList.add('open'), 10);
     unreadMessages = 0;

@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
     <title>Ludo — My Love ❤️</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script defer src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="ludo.css">
@@ -39,7 +39,7 @@
                 <p class="info-text">Share this link with your love:</p>
                 <div class="share-box">
                     <input type="text" id="share-link" readonly>
-                    <button id="copy-link-btn" class="btn-copy"><i class="fa-solid fa-copy"></i></button>
+                    <button id="copy-link-btn" class="btn-copy" aria-label="Copy Link"><i class="fa-solid fa-copy"></i></button>
                 </div>
                 <div class="waiting-anim"><i class="fa-solid fa-heart fa-beat"></i> Waiting...</div>
             </div>
@@ -56,7 +56,7 @@
     <div id="game-screen" class="screen">
         <div class="game-layout">
             <div class="game-top-bar">
-                <a href="ludo.html" class="top-btn" id="leave-btn"><i class="fa-solid fa-arrow-left"></i></a>
+                <a href="ludo.html" class="top-btn" id="leave-btn" aria-label="Leave Game"><i class="fa-solid fa-arrow-left"></i></a>
                 <div class="game-title">Ludo<span>Love</span></div>
                 <div id="turn-indicator" class="turn-badge">Your Turn</div>
             </div>
@@ -73,7 +73,7 @@
                 </div>
 
                 <div class="dice-area">
-                    <button id="roll-dice-btn" class="dice-btn" disabled>
+                    <button id="roll-dice-btn" class="dice-btn" aria-label="Roll Dice" disabled>
                         <div class="dice-face" id="dice-face">?</div>
                     </button>
                     <p id="dice-msg" class="dice-msg">Waiting...</p>
@@ -89,7 +89,7 @@
             <div id="game-toast" class="game-toast hidden"></div>
 
             <!-- Chat Toggle Button -->
-            <button id="chat-toggle-btn" class="chat-toggle-btn">
+            <button id="chat-toggle-btn" class="chat-toggle-btn" aria-label="Toggle Chat">
                 <i class="fa-solid fa-message"></i>
                 <span id="chat-badge" class="chat-badge hidden">!</span>
             </button>
@@ -99,7 +99,7 @@
             <div id="chat-drawer" class="chat-drawer hidden">
                 <div class="chat-drawer-header">
                     <h3><i class="fa-solid fa-comments"></i> Love Chat</h3>
-                    <button id="chat-close-btn" class="chat-close-btn"><i class="fa-solid fa-xmark"></i></button>
+                    <button id="chat-close-btn" class="chat-close-btn" aria-label="Close Chat"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div id="ludo-chat-messages" class="chat-messages-area">
                     <div class="chat-sys-msg">Chat connected securely! ❤️</div>
@@ -116,9 +116,9 @@
                 </div>
 
                 <form id="ludo-chat-form" class="ludo-chat-input-area">
-                    <button type="button" id="gif-toggle-btn" class="gif-toggle-btn" title="Send GIF"><i class="fa-solid fa-images"></i></button>
+                    <button type="button" id="gif-toggle-btn" class="gif-toggle-btn" aria-label="Send GIF" title="Send GIF"><i class="fa-solid fa-images"></i></button>
                     <input type="text" id="ludo-chat-input" placeholder="Message..." autocomplete="off">
-                    <button type="submit" id="chat-send-btn" class="chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                    <button type="submit" id="chat-send-btn" class="chat-send-btn" aria-label="Send Message"><i class="fa-solid fa-paper-plane"></i></button>
                 </form>
             </div>
         </div>

@@ -446,6 +446,14 @@ joinRoomBtn.addEventListener('click', () => {
     joinRoomBtn.disabled = true;
     joinRoomBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting to your love...';
     
+    setTimeout(() => {
+        if (!conn || !conn.open) {
+            joinRoomBtn.disabled = false;
+            joinRoomBtn.innerHTML = 'Join Room <i class="fa-solid fa-door-open"></i>';
+            alert('Connection timed out. Please check the link and try again.');
+        }
+    }, 10000);
+
     conn = peer.connect(hostId);
     setupConnectionHandlers();
 });
@@ -536,9 +544,19 @@ function convertGoogleDriveLink(url) {
 }
 
 // Video Setup
+let currentBlobUrl = null;
+
 function setupVideo(type, url) {
     url = convertGoogleDriveLink(url);
     
+    if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+        currentBlobUrl = null;
+    }
+    if (type === 'local' && url && url.startsWith('blob:')) {
+        currentBlobUrl = url;
+    }
+
     if (type === 'youtube') {
         nativePlayer.classList.add('hidden');
         ytContainer.classList.remove('hidden');
@@ -579,6 +597,8 @@ function initYtPlayer(videoId) {
 }
 
 // Synchronization Logic
+let expectedSync = { action: null, time: null };
+
 function sendSync(data) {
     if (conn && conn.open) {
         conn.send(data);
@@ -586,7 +606,7 @@ function sendSync(data) {
 }
 
 function handleVideoSync(data) {
-    ignoreNextSync = true;
+    expectedSync = { action: data.action, time: data.time };
     if (currentMediaType === 'youtube' && ytPlayer) {
         if (data.action === 'play') {
             ytPlayer.seekTo(data.time, true);
@@ -608,32 +628,59 @@ function handleVideoSync(data) {
             nativePlayer.currentTime = data.time;
         }
     }
-    setTimeout(() => { ignoreNextSync = false; }, 500); // Debounce
+    setTimeout(() => { expectedSync = { action: null, time: null }; }, 1000); // Debounce
+}
+
+function shouldSendSync(action, time) {
+    if (expectedSync.action === action && Math.abs(expectedSync.time - time) < 0.5) {
+        return false;
+    }
+    return true;
 }
 
 // Native Player Sync Listeners
+let nativeSyncSetup = false;
 function setupNativePlayerSync() {
+    if (nativeSyncSetup) return;
+    nativeSyncSetup = true;
+    
     nativePlayer.addEventListener('play', () => {
-        if (!ignoreNextSync) sendSync({ type: 'sync', action: 'play', time: nativePlayer.currentTime });
+        if (shouldSendSync('play', nativePlayer.currentTime)) sendSync({ type: 'sync', action: 'play', time: nativePlayer.currentTime });
     });
     nativePlayer.addEventListener('pause', () => {
-        if (!ignoreNextSync) sendSync({ type: 'sync', action: 'pause', time: nativePlayer.currentTime });
+        if (shouldSendSync('pause', nativePlayer.currentTime)) sendSync({ type: 'sync', action: 'pause', time: nativePlayer.currentTime });
     });
     nativePlayer.addEventListener('seeked', () => {
-        if (!ignoreNextSync) sendSync({ type: 'sync', action: 'seek', time: nativePlayer.currentTime });
+        if (shouldSendSync('seek', nativePlayer.currentTime)) sendSync({ type: 'sync', action: 'seek', time: nativePlayer.currentTime });
     });
 }
 
 // YT Player Sync Listeners
+let lastYtTime = -1;
 function onYtStateChange(event) {
-    if (ignoreNextSync) return;
     const time = ytPlayer.getCurrentTime();
+    lastYtTime = time;
     if (event.data == YT.PlayerState.PLAYING) {
-        sendSync({ type: 'sync', action: 'play', time });
+        if (shouldSendSync('play', time)) sendSync({ type: 'sync', action: 'play', time });
     } else if (event.data == YT.PlayerState.PAUSED) {
-        sendSync({ type: 'sync', action: 'pause', time });
+        if (shouldSendSync('pause', time)) sendSync({ type: 'sync', action: 'pause', time });
     }
 }
+
+// Poll for YT Seeks
+setInterval(() => {
+    if (currentMediaType === 'youtube' && ytPlayer && ytPlayer.getPlayerState) {
+        const state = ytPlayer.getPlayerState();
+        if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED) {
+            const time = ytPlayer.getCurrentTime();
+            if (lastYtTime !== -1 && Math.abs(time - lastYtTime) > 1.5) {
+                // Seek detected
+                if (shouldSendSync('seek', time)) sendSync({ type: 'sync', action: 'seek', time });
+            }
+            lastYtTime = time;
+        }
+    }
+}, 1000);
 
 // Chat & Layout UI Helper
 function toggleLayout(showChat) {
@@ -829,10 +876,15 @@ function addSystemMessage(text) {
 copyInviteBtn.addEventListener('click', () => {
     const url = window.location.origin + window.location.pathname + '#' + peer.id;
     navigator.clipboard.writeText(url).then(() => {
-        const orig = copyInviteBtn.textContent;
-        copyInviteBtn.textContent = 'Copied!';
-        setTimeout(() => copyInviteBtn.textContent = orig, 2000);
+        const orig = copyInviteBtn.innerHTML;
+        copyInviteBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+        setTimeout(() => copyInviteBtn.innerHTML = orig, 2000);
     });
+});
+
+window.addEventListener('beforeunload', () => {
+    if (conn) conn.close();
+    if (peer) peer.destroy();
 });
 
 // Run Init
