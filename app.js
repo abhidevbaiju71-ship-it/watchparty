@@ -476,10 +476,22 @@ createRoomBtn.addEventListener('click', async () => {
     
     if (currentMediaType === 'screenshare') {
         try {
-            localScreenStream = await navigator.mediaDevices.getDisplayMedia({
-                video: { cursor: "always" },
-                audio: true // System audio only
-            });
+            // First try with system audio
+            try {
+                localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: "always" },
+                    audio: true
+                });
+            } catch (audioErr) {
+                console.warn('Could not capture audio, falling back to video only.', audioErr);
+                // Fallback to video only if the device (like some Androids) rejects audio capture
+                localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: "always" },
+                    audio: false
+                });
+                alert("Note: Your device does not support capturing system audio. Sharing screen only.");
+            }
+            
             requestFullScreen();
             setupScreen.classList.remove('active');
             playerScreen.classList.add('active');
@@ -491,7 +503,7 @@ createRoomBtn.addEventListener('click', async () => {
             return;
         } catch (err) {
             console.error('Error starting screen share:', err);
-            alert('Could not start screen cast. Check browser permissions.');
+            alert('Could not start screen cast. Check browser permissions or try using HTTPS.');
             return;
         }
     }
