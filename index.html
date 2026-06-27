@@ -110,6 +110,10 @@
 
             <!-- Floating controls at the top-right of the video-container -->
             <div class="video-controls-top" id="video-controls-top">
+                <button class="top-btn" id="top-cast-btn" style="display: none;" title="Cast Screen">
+                    <i class="fa-solid fa-screencast"></i>
+                    <span>Cast</span>
+                </button>
                 <button class="top-btn" id="top-audio-btn" style="display: none;" title="Change Audio Track">
                     <i class="fa-solid fa-music"></i>
                     <span>Audio</span>
@@ -130,6 +134,12 @@
                     <i class="fa-solid fa-expand"></i>
                     <span>Resize</span>
                 </button>
+            </div>
+
+            <!-- Screenshare Picture-in-Picture Container -->
+            <div id="screenshare-pip" class="screenshare-pip hidden">
+                <video id="screenshare-player" autoplay playsinline></video>
+                <button id="close-screenshare-btn" class="close-pip-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
             <!-- Audio Track Selector Modal -->
