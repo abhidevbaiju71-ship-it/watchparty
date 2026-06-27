@@ -390,6 +390,11 @@ function init() {
         console.error(err);
         alert('Connection error: ' + err.message);
     });
+
+    peer.on('disconnected', () => {
+        console.log('Peer disconnected from server, attempting reconnect...');
+        peer.reconnect();
+    });
 }
 
 // Media Selection UI
@@ -488,19 +493,91 @@ guestMediaFileInput.addEventListener('change', (e) => {
     }
 });
 
+let reconnectInterval = null;
+let reconnectAttempts = 0;
+
+function handleDisconnection() {
+    addSystemMessage('Connection lost.');
+    if (isHost) {
+        conn = null;
+        // Pause video automatically
+        if (currentMediaType === 'youtube' && ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+        else if (nativePlayer) nativePlayer.pause();
+        
+        // Show reconnect UI
+        document.getElementById('reconnect-overlay').classList.remove('hidden');
+        document.getElementById('reconnect-message').textContent = 'Waiting for partner to reconnect...';
+        document.getElementById('reconnect-cancel-btn').classList.remove('hidden');
+    } else {
+        // Guest reconnect loop
+        document.getElementById('reconnect-overlay').classList.remove('hidden');
+        document.getElementById('reconnect-message').textContent = 'Reconnecting to partner...';
+        document.getElementById('reconnect-cancel-btn').classList.remove('hidden');
+        
+        reconnectAttempts = 0;
+        const hostId = window.location.hash.substring(1);
+        
+        if (reconnectInterval) clearInterval(reconnectInterval);
+        reconnectInterval = setInterval(() => {
+            reconnectAttempts++;
+            if (reconnectAttempts > 20) { // 60 seconds (try every 3s)
+                clearInterval(reconnectInterval);
+                document.getElementById('reconnect-message').textContent = 'Reconnection failed.';
+                document.getElementById('reconnect-spinner').classList.add('hidden');
+                return;
+            }
+            if (!conn || !conn.open) {
+                console.log('Attempting reconnect to host...', hostId);
+                conn = peer.connect(hostId);
+                setupConnectionHandlers();
+            } else {
+                clearInterval(reconnectInterval);
+            }
+        }, 3000);
+    }
+}
+
 // Connection Handlers (Shared)
 function setupConnectionHandlers() {
     conn.on('open', () => {
         console.log('Connected to peer');
+        document.getElementById('reconnect-overlay').classList.add('hidden');
+        if (reconnectInterval) {
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
+        }
+
+        if (isHost) {
+            // Send current video state to guest
+            conn.send({
+                type: 'init_video',
+                mediaType: currentMediaType,
+                url: currentMediaType === 'direct' || currentMediaType === 'youtube' ? mediaUrlInput.value : null
+            });
+            // Send current sync state
+            setTimeout(() => {
+                let time = 0;
+                let action = 'pause';
+                if (currentMediaType === 'youtube' && ytPlayer && ytPlayer.getPlayerState) {
+                    time = ytPlayer.getCurrentTime();
+                    action = ytPlayer.getPlayerState() === YT.PlayerState.PLAYING ? 'play' : 'pause';
+                } else if (nativePlayer) {
+                    time = nativePlayer.currentTime;
+                    action = !nativePlayer.paused ? 'play' : 'pause';
+                }
+                conn.send({ type: 'sync', action: action, time: time });
+            }, 500);
+        } else {
+            addSystemMessage('Reconnected to your love! ❤️');
+        }
     });
 
     conn.on('close', () => {
-        addSystemMessage('Your partner disconnected.');
-        if (isHost) conn = null; // Free up room for reconnection
+        handleDisconnection();
     });
     
     conn.on('error', () => {
-        if (isHost) conn = null; // Free up room for reconnection
+        handleDisconnection();
     });
 
     conn.on('data', (data) => {

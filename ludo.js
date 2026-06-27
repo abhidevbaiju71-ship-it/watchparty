@@ -136,9 +136,64 @@ function initPeer() {
   });
 
   peer.on('error', e => { alert('Connection error: ' + e.message); });
+  
+  peer.on('disconnected', () => {
+      console.log('Peer disconnected from server, attempting reconnect...');
+      peer.reconnect();
+  });
+}
+
+let reconnectInterval = null;
+let reconnectAttempts = 0;
+
+function handleDisconnection() {
+    showToast('Connection lost.');
+    if (isHost) {
+        conn = null;
+        document.getElementById('reconnect-overlay').classList.remove('hidden');
+        document.getElementById('reconnect-message').textContent = 'Waiting for partner to reconnect...';
+        document.getElementById('reconnect-cancel-btn').classList.remove('hidden');
+    } else {
+        document.getElementById('reconnect-overlay').classList.remove('hidden');
+        document.getElementById('reconnect-message').textContent = 'Reconnecting to partner...';
+        document.getElementById('reconnect-cancel-btn').classList.remove('hidden');
+        
+        reconnectAttempts = 0;
+        const hostId = location.hash.substring(1);
+        
+        if (reconnectInterval) clearInterval(reconnectInterval);
+        reconnectInterval = setInterval(() => {
+            reconnectAttempts++;
+            if (reconnectAttempts > 20) {
+                clearInterval(reconnectInterval);
+                document.getElementById('reconnect-message').textContent = 'Reconnection failed.';
+                document.getElementById('reconnect-spinner').classList.add('hidden');
+                return;
+            }
+            if (!conn || !conn.open) {
+                console.log('Attempting reconnect to host...', hostId);
+                conn = peer.connect(hostId);
+                setupConn();
+            } else {
+                clearInterval(reconnectInterval);
+            }
+        }, 3000);
+    }
 }
 
 function setupConn() {
+  conn.on('open', () => {
+      document.getElementById('reconnect-overlay').classList.add('hidden');
+      if (reconnectInterval) {
+          clearInterval(reconnectInterval);
+          reconnectInterval = null;
+          showToast('Reconnected successfully!');
+      }
+      if (isHost) {
+          setTimeout(() => sendState(), 500);
+      }
+  });
+
   conn.on('data', d => {
     if (d.type === 'error') {
         alert(d.message);
@@ -152,11 +207,10 @@ function setupConn() {
     if (d.type === 'move') handlePeerMove(d.color, d.idx, d.dice, d.startPos);
   });
   conn.on('close', () => {
-      showToast('Partner disconnected');
-      if (isHost) conn = null;
+      handleDisconnection();
   });
   conn.on('error', () => {
-      if (isHost) conn = null;
+      handleDisconnection();
   });
 }
 

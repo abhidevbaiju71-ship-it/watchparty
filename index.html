@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    <title>For My Love ❤️</title>
+    <title>ForHER..❤️</title>
     <script defer src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -90,15 +90,23 @@
     <!-- Main Player Screen -->
     <div id="player-screen" class="screen">
         <div id="video-container">
-            <!-- Native Video Player for Direct URLs and Local Files -->
             <video id="native-player" controls playsinline></video>
-            <!-- Div for YouTube Iframe API -->
             <div id="youtube-player"></div>
 
-            <!-- Tap overlay to toggle controls visibility -->
             <div id="tap-overlay"></div>
 
-
+            <!-- Reconnection Overlay -->
+            <div id="reconnect-overlay" class="hidden reconnect-overlay">
+                <div class="reconnect-card">
+                    <i class="fa-solid fa-wifi fa-beat-fade reconnect-icon"></i>
+                    <h3 id="reconnect-title">Connection Lost</h3>
+                    <p id="reconnect-message">Waiting for partner...</p>
+                    <div id="reconnect-spinner" class="reconnect-spinner"></div>
+                    <button id="reconnect-cancel-btn" class="btn-secondary hidden" onclick="window.location.reload()">
+                        <i class="fa-solid fa-xmark"></i> Cancel
+                    </button>
+                </div>
+            </div>
 
             <!-- Floating controls at the top-right of the video-container -->
             <div class="video-controls-top" id="video-controls-top">

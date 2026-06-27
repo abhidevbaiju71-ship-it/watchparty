@@ -54,6 +54,19 @@
 
     <!-- GAME SCREEN -->
     <div id="game-screen" class="screen">
+        <!-- Reconnection Overlay -->
+        <div id="reconnect-overlay" class="hidden reconnect-overlay">
+            <div class="reconnect-card">
+                <i class="fa-solid fa-wifi fa-beat-fade reconnect-icon"></i>
+                <h3 id="reconnect-title">Connection Lost</h3>
+                <p id="reconnect-message">Waiting for partner...</p>
+                <div id="reconnect-spinner" class="reconnect-spinner"></div>
+                <button id="reconnect-cancel-btn" class="btn-secondary hidden" onclick="window.location.reload()">
+                    <i class="fa-solid fa-xmark"></i> Cancel
+                </button>
+            </div>
+        </div>
+        
         <div class="game-layout">
             <div class="game-top-bar">
                 <a href="ludo.html" class="top-btn" id="leave-btn" aria-label="Leave Game"><i class="fa-solid fa-arrow-left"></i></a>
