@@ -21,12 +21,7 @@ const nativePlayer = document.getElementById('native-player');
 const ytContainer = document.getElementById('youtube-player');
 const copyInviteBtn = document.getElementById('copy-invite-btn');
 
-// Top Video Controls Elements
 const topRotationBtn = document.getElementById('top-rotation-btn');
-const topCastBtn = document.getElementById('top-cast-btn');
-const screensharePip = document.getElementById('screenshare-pip');
-const screensharePlayer = document.getElementById('screenshare-player');
-const closeScreenshareBtn = document.getElementById('close-screenshare-btn');
 const topLayoutBtn = document.getElementById('top-layout-btn');
 const topFullscreenBtn = document.getElementById('top-fullscreen-btn');
 const topAudioBtn = document.getElementById('top-audio-btn');
@@ -47,6 +42,7 @@ let conn = null; // P2P Connection
 let isHost = false;
 let ytPlayer = null;
 let currentMediaType = 'direct';
+let localScreenStream = null;
 let ignoreNextSync = false; // Prevents infinite sync loops
 let controlsHidden = false; // Track whether floating controls are hidden
 let shiftActive = false; // Custom keyboard shift state
@@ -363,22 +359,29 @@ function init() {
             isHost = true;
             hostPanel.classList.remove('hidden');
             if (topRotationBtn) topRotationBtn.classList.remove('hidden');
-            if (topCastBtn) topCastBtn.style.display = 'flex';
         }
     });
 
     peer.on('call', (call) => {
-        // Automatically answer incoming screenshare
+        // Guest answering screenshare call
         call.answer(); 
         call.on('stream', (remoteStream) => {
-            screensharePip.classList.remove('hidden');
-            screensharePlayer.srcObject = remoteStream;
-            addSystemMessage('Partner started casting their screen! 📱');
-        });
-        call.on('close', () => {
-            screensharePip.classList.add('hidden');
-            screensharePlayer.srcObject = null;
-            addSystemMessage('Screen cast ended.');
+            setupScreen.classList.remove('active');
+            playerScreen.classList.add('active');
+            
+            ytContainer.classList.add('hidden');
+            nativePlayer.classList.remove('hidden');
+            
+            nativePlayer.srcObject = remoteStream;
+            nativePlayer.play().catch(e => console.log('Auto-play blocked'));
+            
+            addSystemMessage('Partner is casting their screen! 📱');
+            
+            // Remove srcObject on end
+            remoteStream.getVideoTracks()[0].onended = () => {
+                nativePlayer.srcObject = null;
+                addSystemMessage('Screen cast ended.');
+            };
         });
     });
 
@@ -421,6 +424,7 @@ function init() {
 }
 
 // Media Selection UI
+const screenshareInfoGroup = document.getElementById('screenshare-info-group');
 platformCards.forEach(card => {
     card.addEventListener('click', () => {
         platformCards.forEach(c => c.classList.remove('active'));
@@ -430,9 +434,15 @@ platformCards.forEach(card => {
         if (currentMediaType === 'local') {
             urlInputGroup.classList.add('hidden');
             fileInputGroup.classList.remove('hidden');
+            if (screenshareInfoGroup) screenshareInfoGroup.classList.add('hidden');
+        } else if (currentMediaType === 'screenshare') {
+            urlInputGroup.classList.add('hidden');
+            fileInputGroup.classList.add('hidden');
+            if (screenshareInfoGroup) screenshareInfoGroup.classList.remove('hidden');
         } else {
             urlInputGroup.classList.remove('hidden');
             fileInputGroup.classList.add('hidden');
+            if (screenshareInfoGroup) screenshareInfoGroup.classList.add('hidden');
             if (currentMediaType === 'youtube') {
                 mediaUrlInput.placeholder = "Paste YouTube link here...";
             } else {
@@ -461,10 +471,32 @@ function requestFullScreen() {
 }
 
 // Host Creates Room
-createRoomBtn.addEventListener('click', () => {
-    requestFullScreen();
-    
+createRoomBtn.addEventListener('click', async () => {
     let url = '';
+    
+    if (currentMediaType === 'screenshare') {
+        try {
+            localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+                video: { cursor: "always" },
+                audio: true // System audio only
+            });
+            requestFullScreen();
+            setupScreen.classList.remove('active');
+            playerScreen.classList.add('active');
+            
+            ytContainer.classList.add('hidden');
+            nativePlayer.classList.remove('hidden');
+            nativePlayer.srcObject = localScreenStream;
+            nativePlayer.play().catch(e => console.log('Auto-play blocked'));
+            return;
+        } catch (err) {
+            console.error('Error starting screen share:', err);
+            alert('Could not start screen cast. Check browser permissions.');
+            return;
+        }
+    }
+    
+    requestFullScreen();
     if (currentMediaType === 'local') {
         const file = mediaFileInput.files[0];
         if (!file) return alert('Select a file first');
@@ -577,19 +609,27 @@ function setupConnectionHandlers() {
                 mediaType: currentMediaType,
                 url: currentMediaType === 'direct' || currentMediaType === 'youtube' ? mediaUrlInput.value : null
             });
-            // Send current sync state
-            setTimeout(() => {
-                let time = 0;
-                let action = 'pause';
-                if (currentMediaType === 'youtube' && ytPlayer && ytPlayer.getPlayerState) {
-                    time = ytPlayer.getCurrentTime();
-                    action = ytPlayer.getPlayerState() === YT.PlayerState.PLAYING ? 'play' : 'pause';
-                } else if (nativePlayer) {
-                    time = nativePlayer.currentTime;
-                    action = !nativePlayer.paused ? 'play' : 'pause';
-                }
-                conn.send({ type: 'sync', action: action, time: time });
-            }, 500);
+            
+            if (currentMediaType === 'screenshare' && localScreenStream) {
+                // Wait a moment for connection to stabilize then call
+                setTimeout(() => {
+                    peer.call(conn.peer, localScreenStream);
+                }, 500);
+            } else {
+                // Send current sync state for non-screenshare
+                setTimeout(() => {
+                    let time = 0;
+                    let action = 'pause';
+                    if (currentMediaType === 'youtube' && ytPlayer && ytPlayer.getPlayerState) {
+                        time = ytPlayer.getCurrentTime();
+                        action = ytPlayer.getPlayerState() === YT.PlayerState.PLAYING ? 'play' : 'pause';
+                    } else if (nativePlayer) {
+                        time = nativePlayer.currentTime;
+                        action = !nativePlayer.paused ? 'play' : 'pause';
+                    }
+                    conn.send({ type: 'sync', action: action, time: time });
+                }, 500);
+            }
         } else {
             addSystemMessage('Reconnected to your love! ❤️');
         }
@@ -619,11 +659,15 @@ function setupConnectionHandlers() {
                 guestFileGroup.classList.remove('hidden');
                 joinRoomBtn.classList.add('hidden'); // Hide join button since local file is needed
                 addSystemMessage('Host is playing a local file. Please select the same file.');
+            } else if (data.mediaType === 'screenshare') {
+                // Screenshare stream handles itself via peer.on('call'), nothing to do here but wait
+                joinRoomBtn.disabled = true;
+                joinRoomBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Waiting for stream...';
             } else {
                 requestFullScreen();
-                setupVideo(data.mediaType, data.url);
                 setupScreen.classList.remove('active');
                 playerScreen.classList.add('active');
+                setupVideo(data.mediaType, data.url);
             }
         }
     });
@@ -927,114 +971,6 @@ if (topAudioBtn) {
         }
         audioTrackModal.classList.remove('hidden');
     });
-}
-
-// Screenshare Control
-let localScreenStream = null;
-if (topCastBtn) {
-    topCastBtn.addEventListener('click', async () => {
-        if (!isHost) return;
-        
-        if (localScreenStream) {
-            // Stop sharing
-            localScreenStream.getTracks().forEach(track => track.stop());
-            localScreenStream = null;
-            topCastBtn.classList.remove('active');
-            if (conn && conn.peer) {
-                conn.send({ type: 'chat', text: 'Stopped casting screen.', isSystem: true });
-            }
-            return;
-        }
-
-        try {
-            localScreenStream = await navigator.mediaDevices.getDisplayMedia({
-                video: { cursor: "always" },
-                audio: true // System audio only as requested
-            });
-            
-            topCastBtn.classList.add('active');
-            addSystemMessage('You are now casting your screen.');
-
-            if (conn && conn.peer) {
-                peer.call(conn.peer, localScreenStream);
-            }
-
-            localScreenStream.getVideoTracks()[0].onended = () => {
-                localScreenStream = null;
-                topCastBtn.classList.remove('active');
-                addSystemMessage('Screen cast ended.');
-            };
-
-        } catch (err) {
-            console.error('Error starting screen share:', err);
-            addSystemMessage('Could not start screen cast. Check browser permissions.');
-        }
-    });
-}
-
-if (closeScreenshareBtn) {
-    closeScreenshareBtn.addEventListener('click', () => {
-        screensharePip.classList.add('hidden');
-        screensharePlayer.srcObject = null;
-    });
-}
-
-// Make PiP Draggable
-let isDragging = false;
-let currentX;
-let currentY;
-let initialX;
-let initialY;
-let xOffset = 0;
-let yOffset = 0;
-
-if (screensharePip) {
-    screensharePip.addEventListener("touchstart", dragStart, false);
-    screensharePip.addEventListener("touchend", dragEnd, false);
-    screensharePip.addEventListener("touchmove", drag, false);
-    screensharePip.addEventListener("mousedown", dragStart, false);
-    screensharePip.addEventListener("mouseup", dragEnd, false);
-    screensharePip.addEventListener("mousemove", drag, false);
-}
-
-function dragStart(e) {
-    if (e.target === closeScreenshareBtn || e.target.closest('.close-pip-btn')) return;
-    if (e.type === "touchstart") {
-        initialX = e.touches[0].clientX - xOffset;
-        initialY = e.touches[0].clientY - yOffset;
-    } else {
-        initialX = e.clientX - xOffset;
-        initialY = e.clientY - yOffset;
-    }
-    if (e.target === screensharePip || e.target === screensharePlayer) {
-        isDragging = true;
-    }
-}
-
-function dragEnd(e) {
-    initialX = currentX;
-    initialY = currentY;
-    isDragging = false;
-}
-
-function drag(e) {
-    if (isDragging) {
-        e.preventDefault();
-        if (e.type === "touchmove") {
-            currentX = e.touches[0].clientX - initialX;
-            currentY = e.touches[0].clientY - initialY;
-        } else {
-            currentX = e.clientX - initialX;
-            currentY = e.clientY - initialY;
-        }
-        xOffset = currentX;
-        yOffset = currentY;
-        setTranslate(currentX, currentY, screensharePip);
-    }
-}
-
-function setTranslate(xPos, yPos, el) {
-    el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
 }
 
 // Rotation Lock Control
