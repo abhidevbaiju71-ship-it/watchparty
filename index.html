@@ -110,6 +110,10 @@
 
             <!-- Floating controls at the top-right of the video-container -->
             <div class="video-controls-top" id="video-controls-top">
+                <button class="top-btn" id="top-audio-btn" style="display: none;" title="Change Audio Track">
+                    <i class="fa-solid fa-music"></i>
+                    <span>Audio</span>
+                </button>
                 <button id="top-rotation-btn" class="control-btn hidden" title="Toggle Rotation Lock">
                     <i class="fa-solid fa-lock-open"></i>
                     <span>Lock Rot.</span>
@@ -126,6 +130,21 @@
                     <i class="fa-solid fa-expand"></i>
                     <span>Resize</span>
                 </button>
+            </div>
+            
+            <!-- Audio Track Selector Modal -->
+            <div id="audio-track-modal" class="hidden reconnect-overlay" style="z-index: 10005;">
+                <div class="reconnect-card" style="min-width: 250px;">
+                    <i class="fa-solid fa-headphones reconnect-icon"></i>
+                    <h3>Audio Tracks</h3>
+                    <p style="font-size: 0.9rem;">Select a soundtrack</p>
+                    <div id="audio-track-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                        <!-- Tracks injected here -->
+                    </div>
+                    <button class="btn-secondary" onclick="document.getElementById('audio-track-modal').classList.add('hidden')">
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
 

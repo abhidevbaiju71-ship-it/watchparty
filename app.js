@@ -25,6 +25,9 @@ const copyInviteBtn = document.getElementById('copy-invite-btn');
 const topRotationBtn = document.getElementById('top-rotation-btn');
 const topLayoutBtn = document.getElementById('top-layout-btn');
 const topFullscreenBtn = document.getElementById('top-fullscreen-btn');
+const topAudioBtn = document.getElementById('top-audio-btn');
+const audioTrackModal = document.getElementById('audio-track-modal');
+const audioTrackList = document.getElementById('audio-track-list');
 const videoControlsTop = document.getElementById('video-controls-top');
 const tapOverlay = document.getElementById('tap-overlay');
 
@@ -655,6 +658,29 @@ function setupVideo(type, url) {
         nativePlayer.classList.remove('hidden');
         nativePlayer.src = url;
         setupNativePlayerSync();
+        
+        // Audio Track Handling
+        nativePlayer.onloadedmetadata = () => {
+            if (nativePlayer.audioTracks && nativePlayer.audioTracks.length > 0) {
+                // Ensure at least one track is enabled if none are
+                let anyEnabled = false;
+                for (let i = 0; i < nativePlayer.audioTracks.length; i++) {
+                    if (nativePlayer.audioTracks[i].enabled) anyEnabled = true;
+                }
+                if (!anyEnabled) {
+                    nativePlayer.audioTracks[0].enabled = true;
+                }
+                
+                // Only show selector if multiple tracks
+                if (nativePlayer.audioTracks.length > 1) {
+                    topAudioBtn.style.display = 'flex';
+                } else {
+                    topAudioBtn.style.display = 'none';
+                }
+            } else {
+                topAudioBtn.style.display = 'none';
+            }
+        };
     }
 }
 
@@ -853,6 +879,35 @@ function updateFullscreenButton() {
 
 document.addEventListener('fullscreenchange', updateFullscreenButton);
 document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+
+// Audio Track Selector Control
+if (topAudioBtn) {
+    topAudioBtn.addEventListener('click', () => {
+        if (!nativePlayer.audioTracks || nativePlayer.audioTracks.length <= 1) return;
+        
+        audioTrackList.innerHTML = '';
+        for (let i = 0; i < nativePlayer.audioTracks.length; i++) {
+            const track = nativePlayer.audioTracks[i];
+            const btn = document.createElement('button');
+            btn.className = track.enabled ? 'btn-primary' : 'btn-secondary';
+            btn.textContent = track.label || track.language || `Track ${i + 1}`;
+            btn.style.width = '100%';
+            
+            btn.onclick = () => {
+                // Disable all tracks
+                for (let j = 0; j < nativePlayer.audioTracks.length; j++) {
+                    nativePlayer.audioTracks[j].enabled = false;
+                }
+                // Enable selected
+                track.enabled = true;
+                audioTrackModal.classList.add('hidden');
+                addSystemMessage(`Switched audio to: ${btn.textContent}`);
+            };
+            audioTrackList.appendChild(btn);
+        }
+        audioTrackModal.classList.remove('hidden');
+    });
+}
 
 // Rotation Lock Control
 let rotationLocked = false;
